@@ -1,0 +1,34 @@
+## --- .NET / C# ---
+bin/
+obj/
+out/
+*.user
+*.userosscache
+*.sln.docstates
+appsettings.Development.json
+appsettings.Local.json
+
+## --- IDE & Editors ---
+# Visual Studio
+.vs/
+*.suo
+*.user
+
+# JetBrains (Rider, WebStorm, VS Code)
+.idea/
+.vscode/
+*.swp
+
+## --- OS Generated Files ---
+.DS_Store
+Thumbs.db
+desktop.ini
+
+##  Frontend  ---
+node_modules/
+dist/
+build/
+
+## --- Secrets & Local Configs ---
+*.env
+*.pem
