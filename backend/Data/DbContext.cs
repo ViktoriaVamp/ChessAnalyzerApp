@@ -12,6 +12,8 @@ namespace App.Data
         }
 
         public DbSet<User> Users { get; set; }
+        public DbSet<RefreshToken> RefreshTokens { get; set; }
+
 
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -25,6 +27,27 @@ namespace App.Data
                 entity.HasIndex(u => u.Username)
                     .IsUnique();
 
+            });
+            modelBuilder.Entity<RefreshToken>(entity =>
+            {
+
+                entity.HasKey(r => r.Id);
+
+                entity.Property(r => r.Token)
+                    .IsRequired()
+                    .HasMaxLength(256);
+
+
+                entity.HasIndex(r => r.Token)
+                    .IsUnique();
+
+                entity.HasOne(r => r.User)
+                    .WithMany()
+                    .HasForeignKey(r => r.UserId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+                entity.Ignore(r => r.IsExpired);
+                entity.Ignore(r => r.IsActive);
             });
 
         }
