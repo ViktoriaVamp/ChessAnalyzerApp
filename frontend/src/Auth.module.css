@@ -1,0 +1,108 @@
+
+.authContainer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: sans-serif;
+}
+
+
+.authCard {
+  background-color: var(--bg2);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 40px;
+  width: 100%;
+  max-width: 400px;
+  box-shadow: 0 8px 24px rgba(17, 17, 17, 0.8);
+}
+
+
+.authTitle {
+  text-align: center;
+  margin-bottom: 24px;
+  color: var(--text);
+  font-size: 24px;
+}
+
+
+.authForm {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+
+.inputGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.inputGroup label {
+  font-size: 14px;
+  color: #989898;
+}
+
+.inputGroup input {
+  background-color: var(--input-field);
+  border: 1px solid var(--input-field-border);
+  border-radius: 4px;
+  padding: 10px 12px;
+  color: var(--text);
+  font-size: 16px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.inputGroup input:focus {
+  border-color: var(--red-l); 
+}
+
+.submitButton {
+  background-color: var(--red-d);
+  color: var(--text);
+  border: 1px solid var(--red-l);
+  border-radius: 4px;
+  padding: 12px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  margin-top: 8px;
+  transition: background-color 0.2s, border-color 0.2s;
+}
+
+.submitButton:hover:not(:disabled) {
+  background-color: var(--red-l);
+  border-color: #767676;
+  color: #ffffff;
+}
+
+.submitButton:disabled {
+  background-color: var(--red-dd);
+  color: #656565;
+  cursor: not-allowed;
+  border-color: #333333;
+}
+
+.switchText {
+  text-align: center;
+  margin-top: 20px;
+  font-size: 14px;
+  color: #878787;
+}
+
+.link {
+  color: #a9a9a9;
+  text-decoration: none;
+  font-weight: bold;
+  transition: color 0.2s;
+}
+
+.link:hover {
+  color: var(--red-l);
+  text-decoration: underline;
+}
