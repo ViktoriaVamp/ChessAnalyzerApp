@@ -1,122 +1,100 @@
-import { useState } from 'react'
+
+import { useState, useEffect } from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom'; 
+import api, { setAccessToken } from './api';
+
+import SignUp from './SignUp';
+import LogIn from './LogIn';
+import MainPage from './MainPage';
+
 import heroImg from './assets/hero.png'
 import reactLogo from './assets/react.svg'
 import viteLogo from './assets/vite.svg'
 import './App.css'
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [isLoading, setIsLoading] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [isServerDown, setIsServerDown] = useState(false);
+
+  useEffect(() => {
+    const initSession = async () => {
+      try {
+        const response = await api.post('/api/auth/refresh');
+        
+        if (response.data?.token) {
+          setAccessToken(response.data.token);
+          setIsAuthenticated(true);
+          setIsServerDown(false);
+        }
+      } catch (err) {
+        if (!err.response) {
+         
+          console.warn("Server unavailable. Session is saved.");
+          setIsServerDown(true);
+        } else if (err.response.status === 401) {
+          
+          setIsAuthenticated(false);
+          setAccessToken(null);
+        }
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    initSession();
+
+    const handleUnauthorized = () => {
+      setIsAuthenticated(false);
+      setAccessToken(null);
+    };
+
+    window.addEventListener('auth:unauthorized', handleUnauthorized);
+    return () => window.removeEventListener('auth:unauthorized', handleUnauthorized);
+  }, []);
+
+  if (isLoading) {
+    return (
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <p>Завантаження..</p>
+      </div>
+    );
+  }
 
   return (
     <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
+      {isServerDown && (
+        <div style={{ background: '#201c26', color: '#fff', textAlign: 'center', padding: '8px' }}>
+         Сервер тимчасово недоступний. Спробуйте пізніше.
         </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.jsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
+      )}
+      <Routes>
+        <Route path="/" element={<Navigate to="/sign-up" replace />} />
 
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
+        <Route 
+          path="/login" 
+          element={
+            isAuthenticated 
+              ? <Navigate to="/main-page" replace /> 
+              : <LogIn setIsAuthenticated={setIsAuthenticated} />
+          } 
+        />
+        <Route 
+          path="/sign-up" 
+          element={
+            isAuthenticated 
+              ? <Navigate to="/main-page" replace /> 
+              : <SignUp setIsAuthenticated={setIsAuthenticated} />
+          } />
+          <Route 
+             path="/main-page" 
+            element={
+              isAuthenticated 
+              ? <MainPage setIsAuthenticated={setIsAuthenticated} /> 
+              : <Navigate to="/login" replace />
+                    } 
+  />
+           </Routes>
     </>
-  )
-}
-
+        );}
 export default App
