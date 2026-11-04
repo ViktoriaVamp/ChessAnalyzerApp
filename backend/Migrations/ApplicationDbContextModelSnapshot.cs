@@ -22,6 +22,35 @@ namespace App.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("App.Models.Friendship", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("FriendId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("FriendId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("Friendships");
+                });
+
             modelBuilder.Entity("App.Models.RefreshToken", b =>
                 {
                     b.Property<Guid>("Id")
@@ -95,6 +124,25 @@ namespace App.Migrations
                     b.ToTable("Users");
                 });
 
+            modelBuilder.Entity("App.Models.Friendship", b =>
+                {
+                    b.HasOne("App.Models.User", "Friend")
+                        .WithMany("ReceivedFriendRequests")
+                        .HasForeignKey("FriendId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("App.Models.User", "User")
+                        .WithMany("SentFriendRequests")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Friend");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("App.Models.RefreshToken", b =>
                 {
                     b.HasOne("App.Models.User", "User")
@@ -104,6 +152,13 @@ namespace App.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("App.Models.User", b =>
+                {
+                    b.Navigation("ReceivedFriendRequests");
+
+                    b.Navigation("SentFriendRequests");
                 });
 #pragma warning restore 612, 618
         }

@@ -13,6 +13,7 @@ namespace App.Data
 
         public DbSet<User> Users { get; set; }
         public DbSet<RefreshToken> RefreshTokens { get; set; }
+        public DbSet<Friendship> Friendships { get; set; }
 
 
 
@@ -49,6 +50,18 @@ namespace App.Data
                 entity.Ignore(r => r.IsExpired);
                 entity.Ignore(r => r.IsActive);
             });
+
+            modelBuilder.Entity<Friendship>()
+                .HasOne(f => f.User)
+                .WithMany(u => u.SentFriendRequests)
+                .HasForeignKey(f => f.UserId)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            modelBuilder.Entity<Friendship>()
+                .HasOne(f => f.Friend)
+                .WithMany(u => u.ReceivedFriendRequests)
+                .HasForeignKey(f => f.FriendId)
+                .OnDelete(DeleteBehavior.Restrict);
 
         }
     }
