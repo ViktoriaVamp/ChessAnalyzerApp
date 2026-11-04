@@ -20,9 +20,15 @@ namespace App.Controllers
             _userService = userService;
         }
 
-        [HttpGet("{id}")]
-        public async Task<IActionResult> GetUserProfile(int id)
+        [HttpGet("profile")]
+        public async Task<IActionResult> GetUserProfile()
         {
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userIdClaim) || !int.TryParse(userIdClaim, out var id))
+            {
+                return Unauthorized();
+            }
+
             var (success, profile) = await _userService.GetUserProfileAsync(id);
 
             if (!success)
@@ -31,7 +37,7 @@ namespace App.Controllers
             return Ok(profile);
         }
 
-        
+
         [HttpGet("friends")]
         public async Task<IActionResult> GetMyFriends()
         {
