@@ -99,6 +99,7 @@ namespace App.Controllers
         }
 
         [HttpPost("log-out")]
+        [Authorize]
         public async Task<IActionResult> Logout()
         {
             var refreshToken = Request.Cookies["refreshToken"];
@@ -119,3 +120,4 @@ namespace App.Controllers
         }
     }
 }
+      

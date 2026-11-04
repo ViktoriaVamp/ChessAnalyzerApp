@@ -12,8 +12,13 @@ namespace App.Models
 
         [MaxLength(50)] public string Email { get; set; } = "";
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-
         public DateTime? ResetTokenExpires { get; set; }
+
+        public ICollection<Friendship> SentFriendRequests { get; set; } = new List<Friendship>();
+        public ICollection<Friendship> ReceivedFriendRequests { get; set; } = new List<Friendship>();
+
         public bool IsDeleted { get; set; } = false;
+
+
     }
 }
