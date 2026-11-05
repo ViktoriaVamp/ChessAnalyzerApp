@@ -26,7 +26,7 @@ const Login = ({ setIsAuthenticated }) => {
     setIsLoading(true);
 
     try {
-      const response = await api.post('/api/auth/log-in', {
+      const response = await api.post('/api/auth/login', {
         Login: formData.login,
         Password: formData.password
       });
