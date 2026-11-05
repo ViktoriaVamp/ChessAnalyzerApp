@@ -29,12 +29,12 @@ namespace App.Controllers
                 return Unauthorized();
             }
 
-            var (success, profile) = await _userService.GetUserProfileAsync(id);
+            var result = await _userService.GetUserProfileAsync(id);
 
-            if (!success)
+            if (!result.IsSuccess)
                 return NotFound();
 
-            return Ok(profile);
+            return Ok(result.Value);
         }
 
 
@@ -43,12 +43,12 @@ namespace App.Controllers
         {
             var currentUserId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
 
-            var (success,friends) = await _userService.GetFriendsAsync(currentUserId);
+            var result = await _userService.GetFriendsAsync(currentUserId);
 
-            if (!success)
+            if (!result.IsSuccess)
                 return NotFound();
 
-            return Ok(friends);
+            return Ok(result.Value);
         }
 
         [HttpPost("friends/request")]
@@ -56,11 +56,11 @@ namespace App.Controllers
         {
             var currentUserId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
 
-            var (success, errorCategory) = await _userService.SendFriendRequestAsync(currentUserId, dto.FriendId);
+            var result = await _userService.SendFriendRequestAsync(currentUserId, dto.FriendId);
 
-            if (!success)
+            if (!result.IsSuccess)
             {
-                return BadRequest(new { message = errorCategory }); 
+                return BadRequest(new { message = result.Error }); 
             }
 
             return Ok(new { message = "Запит успішно надіслано" });
@@ -71,11 +71,11 @@ namespace App.Controllers
         {
             var currentUserId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
 
-            var (success, errorCategory) = await _userService.AcceptFriendRequestAsync(currentUserId, dto.SenderId);
+            var result = await _userService.AcceptFriendRequestAsync(currentUserId, dto.SenderId);
 
-            if (!success)
+            if (!result.IsSuccess)
             {
-                return NotFound(new { message = errorCategory }); 
+                return NotFound(new { message = result.Error}); 
             }
 
             return Ok(new { message = "Запит прийнято" });
@@ -86,9 +86,9 @@ namespace App.Controllers
         {
             var currentUserId = int.Parse(User.FindFirstValue(ClaimTypes.NameIdentifier));
 
-            var success = await _userService.RejectFriendRequestAsync(currentUserId, senderId);
+            var result = await _userService.RejectFriendRequestAsync(currentUserId, senderId);
 
-            if (!success)
+            if (!result.IsSuccess)
             {
                 return NotFound(new { message = "Вхідний запит у друзі не знайдено." }); 
             }

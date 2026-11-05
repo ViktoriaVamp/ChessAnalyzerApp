@@ -20,45 +20,41 @@ namespace App.Controllers
         }
 
 
-        [HttpPost("sign-up")]
+        [HttpPost("signup")]
         public async Task<IActionResult> SignUp([FromBody] SignUpDto dto)
-        {
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
+        {    
+            
+           var result = await _authService.SignUpAsync(dto);
 
-            var (success, accessToken, refreshToken, result, field) = await _authService.SignUpAsync(dto);
+            if (!result.IsSuccess)
+                return Conflict(new { message = result.Error }); 
 
-            if (!success)
-                return Conflict(new { field, message = result }); 
-
-            SetRefreshTokenCookie(refreshToken!.Token, refreshToken.ExpiresAt);
+            SetRefreshTokenCookie(result.Value!.AccessToken, result.Value.RefreshToken.ExpiresAt);
 
             return Ok(new
             {
-                message = "Sig Up Successful",
-                token = accessToken
+                message = "Sign Up Successful",
+                token = result.Value.AccessToken
             });
 
         }
 
 
-        [HttpPost("log-in")]
+        [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LogInDto dto)
         {
-            if (!ModelState.IsValid)
-                return BadRequest(ModelState);
 
-            var (success, accessToken, refreshToken, result) = await _authService.LoginAsync(dto);
+            var result = await _authService.LoginAsync(dto);
 
-            if (!success)
-                return Unauthorized(new { message = result });
+            if (!result.IsSuccess)
+                return Unauthorized(new { message = result.Error });
 
-            SetRefreshTokenCookie(refreshToken!.Token, refreshToken.ExpiresAt);
+            SetRefreshTokenCookie(result.Value!.RefreshToken.Token, result.Value.RefreshToken.ExpiresAt);
 
             return Ok(new
             {
                 message = "Log In Successful",
-                token = accessToken
+                token = result.Value.AccessToken
             });
         }
 
@@ -71,16 +67,13 @@ namespace App.Controllers
             if (string.IsNullOrEmpty(refreshToken))
                 return Unauthorized(new { message = "Refresh token is missing" });
 
-            var (success, newAccessToken, newRefreshToken, message) = await _authService.RefreshTokenAsync(refreshToken);
+            var result = await _authService.RefreshTokenAsync(refreshToken);
 
-            if (!success)
-                return Unauthorized(new { message });
-
-            SetRefreshTokenCookie(newRefreshToken!.Token, newRefreshToken.ExpiresAt);
+            SetRefreshTokenCookie(result.Value!.RefreshToken.Token, result.Value.RefreshToken.ExpiresAt);
 
             return Ok(new
             {
-                token = newAccessToken
+                token = result.Value.AccessToken
             });
         }
 
@@ -98,16 +91,16 @@ namespace App.Controllers
             Response.Cookies.Append("refreshToken", token, cookieOptions);
         }
 
-        [HttpPost("log-out")]
+        [HttpPost("logout")]
         [Authorize]
         public async Task<IActionResult> Logout()
         {
             var refreshToken = Request.Cookies["refreshToken"];
 
-            var (success, message) = await _authService.RevokeRefreshTokenAsync(refreshToken);
+            var result = await _authService.RevokeRefreshTokenAsync(refreshToken);
 
-            if (!success)
-                return Unauthorized(new { message });
+            if (!result.IsSuccess)
+                return Unauthorized(new { message = result.Error});
 
             Response.Cookies.Delete("refreshToken", new CookieOptions
             {
@@ -116,7 +109,7 @@ namespace App.Controllers
                 SameSite = SameSiteMode.Lax
             });
 
-            return Ok(new { message });
+            return Ok(new { message = result.Error });
         }
     }
 }
