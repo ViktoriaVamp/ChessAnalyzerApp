@@ -63,6 +63,10 @@ namespace App.Data
                 .HasForeignKey(f => f.FriendId)
                 .OnDelete(DeleteBehavior.Restrict);
 
+            modelBuilder.Entity<Friendship>()
+            .HasIndex(f => new { f.UserId, f.FriendId })
+            .IsUnique();
+
         }
     }
 

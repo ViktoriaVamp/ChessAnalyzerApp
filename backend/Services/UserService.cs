@@ -1,8 +1,9 @@
 ﻿using App.Data;
+using App.DTOs;
 using App.IServices;
 using App.Models;
+using App.Templates;
 using Microsoft.EntityFrameworkCore;
-using App.DTOs;
 
 namespace App.Services
 {
@@ -10,69 +11,74 @@ namespace App.Services
     {
 
         private readonly ApplicationDbContext _db;
-        public UserService(ApplicationDbContext db, IConfiguration configuration)
+        public UserService(ApplicationDbContext db)
         {
             _db = db;
         }
 
-        public async Task<(bool success, User? user)> GetUserProfileAsync(int id)
+        public async Task<Result<UserProfileDto>> GetUserProfileAsync(int id)
         {
-            var user = await _db.Users.
-                Include(u => u.SentFriendRequests)  
-               .Include(u => u.ReceivedFriendRequests)
-               .FirstOrDefaultAsync(u => u.Id == id);
+            var user = await _db.Users
+                .AsNoTracking()
+                .FirstOrDefaultAsync(u => u.Id == id);
 
             if (user == null)
             {
-                return (false, null);
+                return Result<UserProfileDto>.Failure("Користувача не знайдено.");
             }
 
-            return (true, user);
+            int friendsCount = await _db.Friendships
+                .AsNoTracking()
+                .CountAsync(f => (f.UserId == id || f.FriendId == id) && f.Status == FriendStatus.Accepted);
+
+            var profileDto = new UserProfileDto
+            {
+                Id = user.Id,
+                Username = user.Username,
+                Email = user.Email,
+                CreatedAt = user.CreatedAt,
+                FriendsCount = friendsCount
+            };
+
+            return Result<UserProfileDto>.Success(profileDto);
         }
 
-        public async Task<(bool success, List<UserDto>? friends)> GetFriendsAsync(int currentUserId)
+
+        public async Task<Result<List<UserDto>>> GetFriendsAsync(int currentUserId)
         {
-            var friendships = await _db.Friendships
+            var friends = await _db.Friendships
+                .AsNoTracking()
                 .Where(f => (f.UserId == currentUserId || f.FriendId == currentUserId)
                             && f.Status == FriendStatus.Accepted)
-                .Include(f => f.User)  
-                .Include(f => f.Friend)
+                .Select(f => f.UserId == currentUserId
+                    ? new UserDto { Id = f.Friend.Id, Username = f.Friend.Username }
+                    : new UserDto { Id = f.User.Id, Username = f.User.Username })
                 .ToListAsync();
 
-            if (friendships == null || !friendships.Any())
-            {
-                return (true, new List<UserDto>()); 
-            }
-
-            var friendsList = friendships.Select(f =>
-            {
-                var friendEntity = f.UserId == currentUserId ? f.Friend : f.User;
-
-                return new UserDto
-                {
-                    Id = friendEntity.Id,
-                    Username = friendEntity.Username
-                };
-            }).ToList();
-
-            return (true, friendsList);
+            return Result<List<UserDto>>.Success(friends);
         }
 
-        public async Task<(bool success, string message)> SendFriendRequestAsync(int currentUserId, int friendId)
+        public async Task<Result<bool>> SendFriendRequestAsync(int currentUserId, int friendId)
         {
             if (currentUserId == friendId)
             {
-                return (false, "Неможливо надіслати запит самому собі.");
+                return Result<bool>.Failure("Неможливо надіслати запит самому собі.");
+            }
+
+            var targetExists = await _db.Users.AnyAsync(u => u.Id == friendId);
+            if (!targetExists)
+            {
+                return Result<bool>.Failure("Цільового користувача не існує.");
             }
 
             var existing = await _db.Friendships
-                .FirstOrDefaultAsync(f =>
+                .AnyAsync(f =>
                     (f.UserId == currentUserId && f.FriendId == friendId) ||
                     (f.UserId == friendId && f.FriendId == currentUserId));
 
-            if (existing != null)
+            if (existing)
             {
-                return (false, "Запит або зв'язок між користувачами вже існує.");
+                return Result<bool>.Failure("Запит або зв'язок між користувачами вже існує.");
             }
 
             var friendship = new Friendship
@@ -86,10 +92,11 @@ namespace App.Services
             _db.Friendships.Add(friendship);
             await _db.SaveChangesAsync();
 
-            return (true, string.Empty);
+            return Result<bool>.Success(true);
         }
 
-        public async Task<(bool success, string message)> AcceptFriendRequestAsync(int currentUserId, int senderId)
+
+        public async Task<Result<bool>> AcceptFriendRequestAsync(int currentUserId, int senderId)
         {
             var friendship = await _db.Friendships
                 .FirstOrDefaultAsync(f => f.UserId == senderId
@@ -98,18 +105,17 @@ namespace App.Services
 
             if (friendship == null)
             {
-                return (false, "Вхідний запит у друзі не знайдено.");
+                return Result<bool>.Failure("Вхідний запит у друзі не знайдено.");
             }
 
             friendship.Status = FriendStatus.Accepted;
-
-            _db.Friendships.Update(friendship);
             await _db.SaveChangesAsync();
 
-            return (true, string.Empty);
+            return Result<bool>.Success(true);
         }
 
-        public async Task<bool> RejectFriendRequestAsync(int currentUserId, int senderId)
+
+        public async Task<Result<bool>> RejectFriendRequestAsync(int currentUserId, int senderId)
         {
             var friendship = await _db.Friendships
                 .FirstOrDefaultAsync(f => f.UserId == senderId
@@ -118,15 +124,13 @@ namespace App.Services
 
             if (friendship == null)
             {
-                return false;
+                return Result<bool>.Failure("Вхідний запит у друзі не знайдено.");
             }
 
             _db.Friendships.Remove(friendship);
             await _db.SaveChangesAsync();
 
-            return true;
+            return Result<bool>.Success(true);
         }
-
-
     }
 }
