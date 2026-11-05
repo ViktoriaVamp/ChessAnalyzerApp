@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import styles from './Auth.module.css'; // Можете використати існуючі стилі або створити MainPage.module.css
+import styles from './MainPage.module.css';
 import api, { setAccessToken } from './api';
 
 function MainPage({ setIsAuthenticated }) {
@@ -8,12 +8,30 @@ function MainPage({ setIsAuthenticated }) {
   const [userInfo, setUserInfo] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Приклад завантаження захищених даних з бекенду при монтуванні сторінки
+  // Стан для дзвіночка (запити в друзі)
+  const [showFriendRequests, setShowFriendRequests] = useState(false);
+  const [friendRequests, setFriendRequests] = useState([
+    { id: 1, username: 'Grandmaster_X' },
+    { id: 2, username: 'PawnStormer' }
+  ]);
+
+  // Стан для пошуку
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // Список шах-ботів
+  const chessBots = [
+    { id: 1, name: 'Бот Новачок (Ело ~400)', description: 'Спокійний гравець, який іноді робить прості тактичні помилки. Ідеально для розігріву.' },
+    { id: 2, name: 'Бот Любитель (Ело ~800)', description: 'Агресивний бот, що шукає можливості для виграшу матеріалу та гострих атак.' },
+    { id: 3, name: 'Бот Тактик (Ело ~1200)', description: 'Безкомпромісний суперник із глибоким прорахунком ходів. Виклик для досвідчених гравців.' },
+    { id: 4, name: 'Бот Експерт (Ело ~1600)', description: 'Безкомпромісний суперник із глибоким прорахунком ходів. Виклик для досвідчених гравців.' },
+    { id: 5, name: 'Бот Майстер (Ело ~2000)', description: 'Безкомпромісний суперник із глибоким прорахунком ходів. Виклик для досвідчених гравців.' }
+  ];
+
+  // Завантаження профілю користувача
   useEffect(() => {
     const fetchUserData = async () => {
       try {
-        // Замініть на свій реальний ендпоинт для отримання профілю (наприклад, /api/user/profile)
-        const response = await api.get('/api/auth/me'); 
+        const response = await api.get('/api/user/profile'); 
         setUserInfo(response.data);
       } catch (error) {
         console.error("Не вдалося завантажити дані користувача:", error);
@@ -25,56 +43,171 @@ function MainPage({ setIsAuthenticated }) {
     fetchUserData();
   }, []);
 
-  // Логіка виходу з акаунта (логаут)
+  // Логіка виходу з акаунта
   const handleLogout = async () => {
     try {
-      // Якщо на бекенді є ендпоинт для логауту (який, наприклад, очищує refresh cookie)
-      await api.post('/api/auth/log-out').catch(() => {});
+      await api.post('/api/auth/logout').catch(() => {});
     } finally {
-      // Очищуємо локальний access token
       setAccessToken(null);
-
-      // Змінюємо стан автентифікації у головному App компоненті
       if (setIsAuthenticated) {
         setIsAuthenticated(false);
       }
-
-      // Перенаправляємо на сторінку логіну
       navigate('/login');
     }
   };
 
+  // Обробка заявок у друзі
+  const handleAcceptFriend = (id) => {
+    setFriendRequests(prev => prev.filter(req => req.id !== id));
+  };
+
+  const handleRejectFriend = (id) => {
+    setFriendRequests(prev => prev.filter(req => req.id !== id));
+  };
+
   if (isLoading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: '#111111', color: '#a9a9a9' }}>
-        <p>Завантаження головної сторінки...</p>
+      <div className={styles.loadingContainer}>
+        <p>Завантаження особистого кабінету...</p>
       </div>
     );
   }
 
   return (
-    <div className={styles.authContainer} style={{ flexDirection: 'column', gap: '20px' }}>
-      <div className={styles.authCard} style={{ maxWidth: '600px', textAlign: 'center' }}>
-        <h2 className={styles.authTitle}>Головна сторінка</h2>
+    <div className={styles.pageContainer}>
+      
+      {/* --- Верхня панель ( Header ) --- */}
+      <header className={styles.header}>
         
-        <p style={{ color: '#989898', marginBottom: '20px' }}>
-          Вітаємо у вашому особистому кабінеті! Ви успішно авторизовані.
-        </p>
+        {/* Поле пошуку */}
+        <div className={styles.searchWrapper}>
+          <input 
+            type="text" 
+            placeholder="Пошук гравців чи партій..." 
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className={styles.searchInput}
+          />
+        </div>
 
-        {userInfo && (
-          <div style={{ backgroundColor: '#111111', padding: '15px', borderRadius: '6px', marginBottom: '20px', border: '1px solid #333333', textAlign: 'left' }}>
-            <p style={{ color: '#a9a9a9', margin: '5px 0' }}><strong>Ім'я / Нікнейм:</strong> {userInfo.username || userInfo.nickname || 'Користувач'}</p>
-            <p style={{ color: '#a9a9a9', margin: '5px 0' }}><strong>Email:</strong> {userInfo.email}</p>
+        {/* Навігаційні кнопки та дзвіночок */}
+        <div className={styles.actionsWrapper}>
+          
+          {/* Збережені партії */}
+          <button 
+            onClick={() => navigate('/saved-games')}
+            className={styles.actionButton}
+          >
+            📁 Збережені партії
+          </button>
+
+          {/* Загальна статистика */}
+          <button 
+            onClick={() => navigate('/statistics')}
+            className={styles.actionButton}
+          >
+            📊 Статистика
+          </button>
+
+          {/* Дзвіночок (Запити в друзі) */}
+          <div className={styles.bellContainer}>
+            <button 
+              onClick={() => setShowFriendRequests(!showFriendRequests)}
+              className={styles.bellButton}
+            >
+              🔔
+              {friendRequests.length > 0 && (
+                <span className={styles.badge}>
+                  {friendRequests.length}
+                </span>
+              )}
+            </button>
+
+            {/* Випадаючий список заявок */}
+            {showFriendRequests && (
+              <div className={styles.dropdownMenu}>
+                <h4 className={styles.dropdownTitle}>Запити в друзі</h4>
+                {friendRequests.length === 0 ? (
+                  <p className={styles.noRequestsText}>Нових запитів немає</p>
+                ) : (
+                  <div className={styles.requestList}>
+                    {friendRequests.map(req => (
+                      <div key={req.id} className={styles.requestItem}>
+                        <span className={styles.requestUsername}>{req.username}</span>
+                        <div className={styles.requestActions}>
+                          <button onClick={() => handleAcceptFriend(req.id)} className={styles.acceptBtn}>✓</button>
+                          <button onClick={() => handleRejectFriend(req.id)} className={styles.rejectBtn}>✕</button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
-        )}
 
-        <button 
-          onClick={handleLogout}
-          className={styles.submitButton}
-          style={{ backgroundColor: '#460000' }}
-        >
-          Вийти з акаунта
-        </button>
+          {/* Вихід */}
+          <button 
+            onClick={handleLogout}
+            className={styles.logoutButton}
+          >
+            Вийти
+          </button>
+        </div>
+      </header>
+
+      {/* --- Основний контент --- */}
+      <div className={styles.contentGrid}>
+        
+        {/* Колонка профілю */}
+        <div className={styles.profileCard}>
+          
+          {/* Круг для аватарки */}
+          <div className={styles.avatarCircle}>
+            {userInfo?.avatarUrl ? (
+              <img src={userInfo.avatarUrl} alt="Avatar" className={styles.avatarImg} />
+            ) : (
+              <span className={styles.avatarFallback}>
+                {(userInfo?.username || userInfo?.nickname || 'U').charAt(0).toUpperCase()}
+              </span>
+            )}
+          </div>
+
+          <div>
+            <h3 className={styles.profileName}>{userInfo?.username || userInfo?.nickname || 'Користувач'}</h3>
+            <p className={styles.profileEmail}>{userInfo?.email}</p>
+          </div>
+
+          <div className={styles.profileInfoDetails}>
+            <p className={styles.profileInfoRow}><strong>Приєднався(-лася):</strong> {userInfo?.createdAt ? new Date(userInfo.createdAt).toLocaleDateString() : '01.09.2026'}</p>
+            <p className={styles.profileInfoRow}><strong>Друзі:</strong> {userInfo?.friendsCount || 0}</p>
+          </div>
+        </div>
+
+        {/* Колонка контенту: Список шах-ботів */}
+        <div className={styles.botsSectionContainer}>
+          <div className={styles.botsCard}>
+            <h2 className={styles.botsTitle}>Гра з шах-ботами</h2>
+            
+            <div className={styles.botsList}>
+              {chessBots.map(bot => (
+                <div key={bot.id} className={styles.botItem}>
+                  <div className={styles.botInfo}>
+                    <h4 className={styles.botName}>{bot.name}</h4>
+                    <p className={styles.botDesc}>{bot.description}</p>
+                  </div>
+                  <button 
+                    onClick={() => navigate(`/game/bot/${bot.id}`)}
+                    className={styles.playBotBtn}
+                  >
+                    Почати гру
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
       </div>
     </div>
   );

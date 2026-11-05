@@ -40,7 +40,7 @@ function SignUp({ setIsAuthenticated }) {
     console.log("Надсилаємо дані на бекенд...", formData);
 
   
-    const response = await api.post('/api/auth/sign-up', {
+    const response = await api.post('/api/auth/signup', {
       Username: formData.nickname,
       Email: formData.email,
       Password: formData.password
