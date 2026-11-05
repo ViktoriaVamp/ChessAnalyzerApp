@@ -46,7 +46,8 @@ namespace App.Migrations
 
                     b.HasIndex("FriendId");
 
-                    b.HasIndex("UserId");
+                    b.HasIndex("UserId", "FriendId")
+                        .IsUnique();
 
                     b.ToTable("Friendships");
                 });
