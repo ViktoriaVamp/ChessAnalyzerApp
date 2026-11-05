@@ -1,13 +1,14 @@
 ﻿using App.Data;
+using App.DTOs;
 using App.Models;
 using App.Services;
+using App.Templates;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
-using App.DTOs;
 
 namespace App.Services
 {
@@ -50,8 +51,7 @@ namespace App.Services
         private RefreshToken GenerateRefreshToken(int userId)
         {
             var randomBytes = new byte[64];
-            using var rng = RandomNumberGenerator.Create();
-            rng.GetBytes(randomBytes);
+            RandomNumberGenerator.Fill(randomBytes);
 
             return new RefreshToken
             {
@@ -62,73 +62,62 @@ namespace App.Services
             };
         }
 
-        public async Task<(bool success, string? accessToken, RefreshToken? refreshToken, string? result, string? field)> SignUpAsync(SignUpDto dto)
+
+        public async Task<Result<AuthResponseDto>> SignUpAsync(SignUpDto dto)
         {
             var existingUser = await _db.Users
-         .FirstOrDefaultAsync(u => u.Username == dto.Username || u.Email == dto.Email);
+                .AsNoTracking()
+                .FirstOrDefaultAsync(u => u.Username == dto.Username || u.Email == dto.Email);
 
             if (existingUser != null)
             {
                 if (existingUser.Username == dto.Username)
-                    return (false, null, null, "This username is already taken", "username");
+                    return Result<AuthResponseDto>.Failure("Цей нік уже зайнятий", "username");
 
                 if (existingUser.Email == dto.Email)
-                    return (false, null, null, "This email is already registered", "email");
+                    return Result<AuthResponseDto>.Failure("Цей імейл уже існує", "email");
             }
-
-
-            string passwordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password);
 
             var user = new User
             {
                 Username = dto.Username,
-
-                PasswordHash = passwordHash,
-
-                Email = dto.Email,
-
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password),
+                Email = dto.Email
             };
 
             _db.Users.Add(user);
 
             try
             {
-
                 await _db.SaveChangesAsync();
             }
-            catch (DbUpdateException ex)
+            catch (DbUpdateException)
             {
-                return (false, null, null, "An error occurred while accessing the database. Try again", null);
+                return Result<AuthResponseDto>.Failure("Помилка доступу. Try again");
             }
-            catch (Exception ex)
+            catch (Exception)
             {
-                return (false, null, null, "An server error occurred. Try again", null);
+                return Result<AuthResponseDto>.Failure("Помилка сервера. Try again");
             }
+
             var accessToken = GenerateJwtToken(user);
             var refreshToken = GenerateRefreshToken(user.Id);
 
             _db.RefreshTokens.Add(refreshToken);
-
-
             await _db.SaveChangesAsync();
 
-            return (true, accessToken, refreshToken, "Sign Up Successful", null);
+            return Result<AuthResponseDto>.Success(new AuthResponseDto(accessToken, refreshToken));
         }
 
-        public async Task<(bool success, string? accessToken, RefreshToken? refreshToken, string? result)> LoginAsync(LogInDto dto)
+
+        public async Task<Result<AuthResponseDto>> LoginAsync(LogInDto dto)
         {
             var user = await _db.Users
-        .FirstOrDefaultAsync(u => u.Email == dto.Login || u.Username == dto.Login);
+                .FirstOrDefaultAsync(u => u.Email == dto.Login || u.Username == dto.Login);
 
-            if (user == null)
+            if (user == null || !BCrypt.Net.BCrypt.Verify(dto.Password, user.PasswordHash))
             {
-                return (false, null, null, "Invalid email/nickname or password");
-            }
-            bool isPasswordValid = BCrypt.Net.BCrypt.Verify(dto.Password, user.PasswordHash);
-
-            if (!isPasswordValid)
-            {
-                return (false, null, null, "Invalid password");
+                return Result<AuthResponseDto>.Failure("Неправильний пароль або логін");
             }
 
             var accessToken = GenerateJwtToken(user);
@@ -137,10 +126,11 @@ namespace App.Services
             _db.RefreshTokens.Add(refreshToken);
             await _db.SaveChangesAsync();
 
-            return (true, accessToken, refreshToken, "Login Successful");
+            return Result<AuthResponseDto>.Success(new AuthResponseDto(accessToken, refreshToken));
         }
 
-        public async Task<(bool success, string? accessToken, RefreshToken? newRefreshToken, string? message)> RefreshTokenAsync(string token)
+
+        public async Task<Result<AuthResponseDto>> RefreshTokenAsync(string token)
         {
             var refreshToken = await _db.RefreshTokens
                 .Include(r => r.User)
@@ -148,9 +138,8 @@ namespace App.Services
 
             if (refreshToken == null || !refreshToken.IsActive)
             {
-                return (false, null, null, "Invalid or expired refresh token");
+                return Result<AuthResponseDto>.Failure("Неправильний або просрочений токен");
             }
-
 
             refreshToken.RevokedAt = DateTime.UtcNow;
 
@@ -160,29 +149,24 @@ namespace App.Services
             _db.RefreshTokens.Add(newRefreshToken);
             await _db.SaveChangesAsync();
 
-            return (true, newAccessToken, newRefreshToken, "Token refreshed successfully");
+            return Result<AuthResponseDto>.Success(new AuthResponseDto(newAccessToken, newRefreshToken));
         }
 
-        public async Task<(bool success, string? result)> RevokeRefreshTokenAsync(string refreshToken)
-        {
 
+        public async Task<Result<bool>> RevokeRefreshTokenAsync(string refreshToken)
+        {
             var token = await _db.RefreshTokens
-            .FirstOrDefaultAsync(t => t.Token == refreshToken);
+                .FirstOrDefaultAsync(t => t.Token == refreshToken);
 
             if (token == null || !token.IsActive)
             {
-                return (false, "Issue with logging out occured");
+                return Result<bool>.Failure("Помилка");
             }
 
-
             token.RevokedAt = DateTime.UtcNow;
-
-
             await _db.SaveChangesAsync();
 
-            return (true, "Log out successfully");
+            return Result<bool>.Success(true);
         }
-
     }
-
 }

@@ -1,16 +1,15 @@
-﻿using App.Models;
+﻿using App.Templates;
 using App.DTOs;
+using App.Models;
+
 namespace App.Services
 {
-
     public interface IAuthService
     {
         string GenerateJwtToken(User user);
-        Task<(bool success, string? accessToken, RefreshToken? newRefreshToken, string? message)> RefreshTokenAsync(string token);
-        Task<(bool success, string? accessToken, RefreshToken? refreshToken, string? result, string? field)> SignUpAsync(SignUpDto dto);
-        Task<(bool success, string? accessToken, RefreshToken? refreshToken, string? result)> LoginAsync(LogInDto dto);
-        Task<(bool success, string? result)> RevokeRefreshTokenAsync(string refreshToken);
-
+        Task<Result<AuthResponseDto>> SignUpAsync(SignUpDto dto);
+        Task<Result<AuthResponseDto>> LoginAsync(LogInDto dto);
+        Task<Result<AuthResponseDto>> RefreshTokenAsync(string token);
+        Task<Result<bool>> RevokeRefreshTokenAsync(string refreshToken);
     }
-
 }
