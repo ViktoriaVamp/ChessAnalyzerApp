@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom'; 
 import api, { setAccessToken } from './api';
@@ -6,11 +5,9 @@ import api, { setAccessToken } from './api';
 import SignUp from './SignUp';
 import LogIn from './LogIn';
 import MainPage from './MainPage';
+import UserProfilePage from './UserProfilePage';
 
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
+import './App.css';
 
 function App() {
   const [isLoading, setIsLoading] = useState(true);
@@ -29,11 +26,9 @@ function App() {
         }
       } catch (err) {
         if (!err.response) {
-         
           console.warn("Server unavailable. Session is saved.");
           setIsServerDown(true);
-        } else if (err.response.status === 401) {
-          
+        } else {
           setIsAuthenticated(false);
           setAccessToken(null);
         }
@@ -55,8 +50,8 @@ function App() {
 
   if (isLoading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
-        <p>Завантаження..</p>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: 'var(--bg, #111111)', color: 'var(--text, #a9a9a9)' }}>
+        <p>Завантаження...</p>
       </div>
     );
   }
@@ -64,12 +59,15 @@ function App() {
   return (
     <>
       {isServerDown && (
-        <div style={{ background: '#201c26', color: '#fff', textAlign: 'center', padding: '8px' }}>
-         Сервер тимчасово недоступний. Спробуйте пізніше.
+        <div style={{ background: 'var(--red-dd, #2a0000)', borderBottom: '1px solid var(--red-l, #610000)', color: 'var(--text, #a9a9a9)', textAlign: 'center', padding: '8px' }}>
+          Сервер тимчасово недоступний. Спробуйте пізніше.
         </div>
       )}
       <Routes>
-        <Route path="/" element={<Navigate to="/sign-up" replace />} />
+        <Route 
+          path="/" 
+          element={<Navigate to={isAuthenticated ? "/main-page" : "/login"} replace />} 
+        />
 
         <Route 
           path="/login" 
@@ -79,22 +77,38 @@ function App() {
               : <LogIn setIsAuthenticated={setIsAuthenticated} />
           } 
         />
+
         <Route 
           path="/sign-up" 
           element={
             isAuthenticated 
               ? <Navigate to="/main-page" replace /> 
               : <SignUp setIsAuthenticated={setIsAuthenticated} />
-          } />
-          <Route 
-             path="/main-page" 
-            element={
-              isAuthenticated 
+          } 
+        />
+
+        <Route 
+          path="/main-page" 
+          element={
+            isAuthenticated 
               ? <MainPage setIsAuthenticated={setIsAuthenticated} /> 
               : <Navigate to="/login" replace />
-                    } 
-  />
-           </Routes>
+          } 
+        />
+
+        {/* Перехоплення невідомих маршрутів */}
+        <Route 
+          path="*" 
+          element={<Navigate to={isAuthenticated ? "/main-page" : "/login"} replace />} 
+        />
+
+        <Route
+         path="/user/:username" 
+         element={<UserProfilePage />}
+         />
+      </Routes>
     </>
-        );}
-export default App
+  );
+}
+
+export default App;

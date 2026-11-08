@@ -2,39 +2,42 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import styles from './MainPage.module.css';
 import api, { setAccessToken } from './api';
+import ChessGameModal from "./ChessGameModal";
 
 function MainPage({ setIsAuthenticated }) {
   const navigate = useNavigate();
   const [userInfo, setUserInfo] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [selectedBot, setSelectedBot] = useState(null);
 
-  // Стан для дзвіночка (запити в друзі)
   const [showFriendRequests, setShowFriendRequests] = useState(false);
-  const [friendRequests, setFriendRequests] = useState([
-    { id: 1, username: 'Grandmaster_X' },
-    { id: 2, username: 'PawnStormer' }
-  ]);
+  const [friendRequests, setFriendRequests] = useState([]);
 
-  // Стан для пошуку
+
   const [searchQuery, setSearchQuery] = useState('');
 
   // Список шах-ботів
   const chessBots = [
-    { id: 1, name: 'Бот Новачок (Ело ~400)', description: 'Спокійний гравець, який іноді робить прості тактичні помилки. Ідеально для розігріву.' },
-    { id: 2, name: 'Бот Любитель (Ело ~800)', description: 'Агресивний бот, що шукає можливості для виграшу матеріалу та гострих атак.' },
-    { id: 3, name: 'Бот Тактик (Ело ~1200)', description: 'Безкомпромісний суперник із глибоким прорахунком ходів. Виклик для досвідчених гравців.' },
-    { id: 4, name: 'Бот Експерт (Ело ~1600)', description: 'Безкомпромісний суперник із глибоким прорахунком ходів. Виклик для досвідчених гравців.' },
-    { id: 5, name: 'Бот Майстер (Ело ~2000)', description: 'Безкомпромісний суперник із глибоким прорахунком ходів. Виклик для досвідчених гравців.' }
+    { id: 1, name: 'Бот Новачок (Ело ~400)', elo: 400, description: 'Спокійний гравець, який іноді робить прості тактичні помилки. Ідеально для розігріву.' },
+    { id: 2, name: 'Бот Любитель (Ело ~800)',elo: 800, description: 'Агресивний бот, що шукає можливості для виграшу матеріалу та гострих атак.' },
+    { id: 3, name: 'Бот Тактик (Ело ~1200)',elo: 1200, description: 'Безкомпромісний суперник із глибоким прорахунком ходів. Виклик для досвідчених гравців.' },
+    { id: 4, name: 'Бот Експерт (Ело ~1600)', elo: 1600, description: 'Безкомпромісний суперник із глибоким прорахунком ходів. Виклик для досвідчених гравців.' },
+    { id: 5, name: 'Бот Майстер (Ело ~2000)',elo: 2000, description: 'Безкомпромісний суперник із глибоким прорахунком ходів. Виклик для досвідчених гравців.' }
   ];
 
-  // Завантаження профілю користувача
   useEffect(() => {
     const fetchUserData = async () => {
       try {
-        const response = await api.get('/api/user/profile'); 
-        setUserInfo(response.data);
+       
+        const [profileResponse, requestsResponse] = await Promise.all([
+          api.get('/api/user/profile'),
+          api.get('/api/user/friend-requests') 
+        ]);
+
+        setUserInfo(profileResponse.data);
+        setFriendRequests(requestsResponse.data);
       } catch (error) {
-        console.error("Не вдалося завантажити дані користувача:", error);
+        console.error("Не вдалося завантажити дані сторінки:", error);
       } finally {
         setIsLoading(false);
       }
@@ -43,7 +46,6 @@ function MainPage({ setIsAuthenticated }) {
     fetchUserData();
   }, []);
 
-  // Логіка виходу з акаунта
   const handleLogout = async () => {
     try {
       await api.post('/api/auth/logout').catch(() => {});
@@ -56,14 +58,35 @@ function MainPage({ setIsAuthenticated }) {
     }
   };
 
-  // Обробка заявок у друзі
-  const handleAcceptFriend = (id) => {
-    setFriendRequests(prev => prev.filter(req => req.id !== id));
+ const handleAcceptFriend = async (id) => {
+    try {
+      await api.post(`/api/user/friends/${id}/accept`); 
+      
+      setFriendRequests(prev => prev.filter(req => req.id !== id));
+      
+      const profileResponse = await api.get('/api/user/profile');
+      setUserInfo(profileResponse.data);
+    } catch (error) {
+      console.error("Помилка при прийнятті запиту:", error.response?.status, error.response?.data);
+    }
   };
 
-  const handleRejectFriend = (id) => {
-    setFriendRequests(prev => prev.filter(req => req.id !== id));
+  const handleRejectFriend = async (id) => {
+    try {
+      await api.delete(`/api/friends/reject/{senderId}`); 
+      
+      setFriendRequests(prev => prev.filter(req => req.id !== id));
+    } catch (error) {
+      console.error("Помилка при відхиленні запиту в друзі:", error);
+    }
   };
+
+  const handleSearchKeyDown = (e) => {
+  if (e.key === 'Enter' && searchQuery.trim()) {
+  
+    navigate(`/user/${searchQuery.trim()}`);
+  }
+};
 
   if (isLoading) {
     return (
@@ -76,24 +99,24 @@ function MainPage({ setIsAuthenticated }) {
   return (
     <div className={styles.pageContainer}>
       
-      {/* --- Верхня панель ( Header ) --- */}
+     
       <header className={styles.header}>
         
-        {/* Поле пошуку */}
+      
         <div className={styles.searchWrapper}>
           <input 
             type="text" 
             placeholder="Пошук гравців чи партій..." 
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            onKeyDown={handleSearchKeyDown}
             className={styles.searchInput}
           />
         </div>
 
-        {/* Навігаційні кнопки та дзвіночок */}
-        <div className={styles.actionsWrapper}>
+       <div className={styles.actionsWrapper}>
           
-          {/* Збережені партії */}
+        
           <button 
             onClick={() => navigate('/saved-games')}
             className={styles.actionButton}
@@ -101,7 +124,7 @@ function MainPage({ setIsAuthenticated }) {
             📁 Збережені партії
           </button>
 
-          {/* Загальна статистика */}
+        
           <button 
             onClick={() => navigate('/statistics')}
             className={styles.actionButton}
@@ -109,7 +132,7 @@ function MainPage({ setIsAuthenticated }) {
             📊 Статистика
           </button>
 
-          {/* Дзвіночок (Запити в друзі) */}
+         
           <div className={styles.bellContainer}>
             <button 
               onClick={() => setShowFriendRequests(!showFriendRequests)}
@@ -123,7 +146,7 @@ function MainPage({ setIsAuthenticated }) {
               )}
             </button>
 
-            {/* Випадаючий список заявок */}
+           
             {showFriendRequests && (
               <div className={styles.dropdownMenu}>
                 <h4 className={styles.dropdownTitle}>Запити в друзі</h4>
@@ -146,7 +169,7 @@ function MainPage({ setIsAuthenticated }) {
             )}
           </div>
 
-          {/* Вихід */}
+        
           <button 
             onClick={handleLogout}
             className={styles.logoutButton}
@@ -179,8 +202,12 @@ function MainPage({ setIsAuthenticated }) {
           </div>
 
           <div className={styles.profileInfoDetails}>
-            <p className={styles.profileInfoRow}><strong>Приєднався(-лася):</strong> {userInfo?.createdAt ? new Date(userInfo.createdAt).toLocaleDateString() : '01.09.2026'}</p>
-            <p className={styles.profileInfoRow}><strong>Друзі:</strong> {userInfo?.friendsCount || 0}</p>
+            <p className={styles.profileInfoRow}>
+              <strong>Приєднався(-лася):</strong> {userInfo?.createdAt ? new Date(userInfo.createdAt).toLocaleDateString() : '01.09.2026'}
+            </p>
+            <p className={styles.profileInfoRow}>
+              <strong>Друзі:</strong> {userInfo?.friendsCount || 0}
+            </p>
           </div>
         </div>
 
@@ -197,7 +224,7 @@ function MainPage({ setIsAuthenticated }) {
                     <p className={styles.botDesc}>{bot.description}</p>
                   </div>
                   <button 
-                    onClick={() => navigate(`/game/bot/${bot.id}`)}
+                    onClick={() => setSelectedBot(bot)}
                     className={styles.playBotBtn}
                   >
                     Почати гру
@@ -209,6 +236,16 @@ function MainPage({ setIsAuthenticated }) {
         </div>
 
       </div>
+
+      {/* --- Модальне вікно шахової партії --- */}
+      {selectedBot && (
+        <ChessGameModal
+          bot={selectedBot}
+          user={userInfo}
+          onClose={() => setSelectedBot(null)}
+        />
+      )}
+
     </div>
   );
 }
