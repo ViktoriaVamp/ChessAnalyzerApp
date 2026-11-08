@@ -48,6 +48,7 @@ builder.Services.AddCors(options =>
 
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<StockfishService>();
 
 
 builder.Services.AddAuthentication(options =>
