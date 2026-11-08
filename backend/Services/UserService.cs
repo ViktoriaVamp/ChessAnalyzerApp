@@ -43,7 +43,32 @@ namespace App.Services
             return Result<UserProfileDto>.Success(profileDto);
         }
 
+        public async Task<Result<UserProfileDto>> GetUserProfileByUsernameAsync(string username)
+        {
+               var user = await _db.Users
+               .AsNoTracking()
+               .FirstOrDefaultAsync(u => u.Username == username);
 
+            if (user == null)
+            {
+                return Result<UserProfileDto>.Failure("Користувача не знайдено.");
+            }
+
+            int friendsCount = await _db.Friendships
+                .AsNoTracking()
+                .CountAsync(f => (f.UserId == user.Id || f.FriendId == user.Id) && f.Status == FriendStatus.Accepted);
+
+            var profileDto = new UserProfileDto
+            {
+                Id = user.Id,
+                Username = user.Username,
+                Email = user.Email,
+                CreatedAt = user.CreatedAt,
+                FriendsCount = friendsCount
+            };
+
+            return Result<UserProfileDto>.Success(profileDto);
+        }
         public async Task<Result<List<UserDto>>> GetFriendsAsync(int currentUserId)
         {
             var friends = await _db.Friendships
@@ -56,6 +81,22 @@ namespace App.Services
                 .ToListAsync();
 
             return Result<List<UserDto>>.Success(friends);
+        }
+
+        public async Task<Result<List<UserDto>>> GetPendingFriendRequestsAsync(int userId)
+        {
+            var requests = await _db.Friendships
+                .AsNoTracking()
+                .Where(f => f.FriendId == userId && f.Status == FriendStatus.Pending)
+                .Include(f => f.User) 
+                .Select(f => new UserDto
+                {
+                    Id = f.UserId, 
+                    Username = f.User.Username
+                })
+                .ToListAsync();
+
+            return Result<List<UserDto>>.Success(requests);
         }
 
         public async Task<Result<bool>> SendFriendRequestAsync(int currentUserId, int friendId)
@@ -124,7 +165,7 @@ namespace App.Services
 
             if (friendship == null)
             {
-                return Result<bool>.Failure("Вхідний запит у друзі не знайдено.");
+                return Result<bool>.Failure("Дружбу не знайдено.");
             }
 
             _db.Friendships.Remove(friendship);
@@ -132,5 +173,30 @@ namespace App.Services
 
             return Result<bool>.Success(true);
         }
+
+        public async Task<Result<bool>> DeleteFriendAsync(int currentUserId, int friendId)
+        {
+            if (currentUserId == friendId)
+            {
+                return Result<bool>.Failure("Неможливо видалити себе з друзів.");
+            }
+
+            var friendship = await _db.Friendships
+                .FirstOrDefaultAsync(f =>
+                    ((f.UserId == currentUserId && f.FriendId == friendId) ||
+                     (f.UserId == friendId && f.FriendId == currentUserId))
+                    && f.Status == FriendStatus.Accepted);
+
+            if (friendship == null)
+            {
+                return Result<bool>.Failure("Дружбу не знайдено.");
+            }
+
+            _db.Friendships.Remove(friendship);
+            await _db.SaveChangesAsync();
+
+            return Result<bool>.Success(true);
+        }
+
     }
 }

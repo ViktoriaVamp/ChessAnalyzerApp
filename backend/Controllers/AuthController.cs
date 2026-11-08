@@ -69,6 +69,11 @@ namespace App.Controllers
 
             var result = await _authService.RefreshTokenAsync(refreshToken);
 
+            if (!result.IsSuccess)
+            {
+                return Unauthorized(new { message = result.Error ?? "Недійсний або прострочений refresh token" });
+            }
+
             SetRefreshTokenCookie(result.Value!.RefreshToken.Token, result.Value.RefreshToken.ExpiresAt);
 
             return Ok(new
