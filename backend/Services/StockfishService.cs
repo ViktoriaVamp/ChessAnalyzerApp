@@ -1,10 +1,11 @@
 ﻿
+using App.IServices;
 using System.Diagnostics;
 
 
 namespace App.Services
 {
-    public class StockfishService
+    public class StockfishService : IStockFishService
     {
         private readonly string _stockfishPath;
 
@@ -22,11 +23,11 @@ namespace App.Services
            
             var (skillLevel, moveTimeMs) = elo switch
             {
-                <= 400 => (0, 1000),   
-                <= 800 => (3, 2500),   
-                <= 1200 => (7, 4000),  
-                <= 1600 => (13, 5000),
-                _ => (20, 7000) 
+                <= 400 => (0, Random.Shared.Next(500, 2000)),   
+                <= 800 => (3, Random.Shared.Next(1500, 3000)),   
+                <= 1200 => (7, Random.Shared.Next(2500,4500 )),  
+                <= 1600 => (13, Random.Shared.Next(4000, 6000)),
+                _ => (20, Random.Shared.Next(5000, 9000)) 
             };
 
             var startInfo = new ProcessStartInfo

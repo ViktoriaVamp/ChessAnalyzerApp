@@ -26,15 +26,6 @@ builder.Services.AddControllers()
     });
 
 
-builder.Services.AddDbContext<App.Data.ApplicationDbContext>(options =>
-    options.UseNpgsql(
-        builder.Configuration.GetConnectionString("DefaultConnection"),
-        npgsqlOptions => npgsqlOptions.EnableRetryOnFailure(
-            maxRetryCount: 5,
-            maxRetryDelay: TimeSpan.FromSeconds(10),
-            errorCodesToAdd: null)
-    ));
-
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
@@ -48,7 +39,8 @@ builder.Services.AddCors(options =>
 
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IUserService, UserService>();
-builder.Services.AddScoped<StockfishService>();
+builder.Services.AddScoped<IStockFishService,StockfishService>();
+builder.Services.AddScoped<StockfishAnalysisService>();
 
 
 builder.Services.AddAuthentication(options =>

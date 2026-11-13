@@ -15,6 +15,8 @@ namespace App.Data
         public DbSet<RefreshToken> RefreshTokens { get; set; }
         public DbSet<Friendship> Friendships { get; set; }
 
+        public DbSet<AnalysisTask> AnalysisTasks { get; set; }
+
 
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)

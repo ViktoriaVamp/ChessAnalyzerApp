@@ -22,6 +22,44 @@ namespace App.Migrations
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
+            modelBuilder.Entity("App.Models.AnalysisTask", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Fen")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("MaxMoves")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("ProgressPercent")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ResultMovesJson")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Stage")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("TargetDepth")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("AnalysisTasks");
+                });
+
             modelBuilder.Entity("App.Models.Friendship", b =>
                 {
                     b.Property<int>("Id")
