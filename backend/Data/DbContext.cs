@@ -16,6 +16,7 @@ namespace App.Data
         public DbSet<Friendship> Friendships { get; set; }
 
         public DbSet<AnalysisTask> AnalysisTasks { get; set; }
+        public DbSet<SavedGame> SavedGames { get; set; }
 
 
 
@@ -69,6 +70,28 @@ namespace App.Data
             .HasIndex(f => new { f.UserId, f.FriendId })
             .IsUnique();
 
+            modelBuilder.Entity<AnalysisTask>(entity =>
+            {
+                entity.HasIndex(a => a.Id);
+
+                entity.HasOne(a => a.User)
+                    .WithMany()
+                    .HasForeignKey(a => a.UserId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+            });
+
+            modelBuilder.Entity<SavedGame>(entity =>
+            {
+                entity.HasIndex(s => s.Id);
+
+                entity.HasOne(s => s.User)
+                    .WithMany()
+                    .HasForeignKey(s => s.UserId)
+                    .OnDelete(DeleteBehavior.Cascade);
+
+
+            });
         }
     }
 

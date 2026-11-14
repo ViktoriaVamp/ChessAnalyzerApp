@@ -1,18 +1,16 @@
 ﻿using App.Data;
 using App.DTOs;
+using App.IServices;
 using App.Models;
 using App.Services;
-using App.IServices;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 using System.Text.Json;
-
 
 namespace App.Controllers
 {
-
-
     [Authorize]
     [ApiController]
     [Route("api/[controller]")]
@@ -29,10 +27,31 @@ namespace App.Controllers
             _db = db;
         }
 
+        private async Task<int> ResolveUserIdAsync()
+        {
+            var claimId = User.FindFirstValue(ClaimTypes.NameIdentifier)
+                       ?? User.FindFirstValue("id")
+                       ?? User.FindFirstValue("sub");
+
+            if (int.TryParse(claimId, out int parsedId))
+            {
+                bool exists = await _db.Users.AnyAsync(u => u.Id == parsedId);
+                if (exists) return parsedId;
+            }
+
+            var claimName = User.Identity?.Name ?? User.FindFirstValue(ClaimTypes.Name) ?? User.FindFirstValue(ClaimTypes.Email);
+            if (!string.IsNullOrEmpty(claimName))
+            {
+                var userByName = await _db.Users.FirstOrDefaultAsync(u => u.Username == claimName || u.Email == claimName);
+                if (userByName != null) return userByName.Id;
+            }
+
+            return await _db.Users.Select(u => u.Id).FirstOrDefaultAsync();
+        }
+
         [HttpPost("bot-move")]
         public async Task<IActionResult> GetBotMove([FromBody] BotMoveRequestDto dto, CancellationToken cancellationToken)
         {
-
             if (string.IsNullOrWhiteSpace(dto.Fen))
             {
                 return BadRequest(new { message = "Позиція FEN є обов'язковою." });
@@ -64,14 +83,12 @@ namespace App.Controllers
             }
         }
 
-
         [HttpPost("analyze-start")]
         public async Task<IActionResult> StartAnalysis([FromBody] StartAnalysisRequestDto dto)
         {
             if (string.IsNullOrWhiteSpace(dto.Fen))
                 return BadRequest(new { message = "Позиція FEN є обов'язковою." });
 
-        
             if (dto.Depth < 1 || dto.Depth > 16 || dto.MaxMoves < 1 || dto.MaxMoves > 20)
             {
                 return BadRequest(new
@@ -80,16 +97,19 @@ namespace App.Controllers
                 });
             }
 
-            bool hasRunningTask = await _db.AnalysisTasks.AnyAsync(t => t.Status == "Running");
+            int validUserId = await ResolveUserIdAsync();
+
+            bool hasRunningTask = await _db.AnalysisTasks.AnyAsync(t => t.UserId == validUserId && t.Status == "Running");
             if (hasRunningTask)
             {
                 return BadRequest(new { message = "У вас вже виконується задача аналізу. Зачекайте або скасуйте її." });
             }
 
-            int totalTasks = await _db.AnalysisTasks.CountAsync();
+            int totalTasks = await _db.AnalysisTasks.CountAsync(t => t.UserId == validUserId);
             if (totalTasks >= 15)
             {
                 var oldestTasks = await _db.AnalysisTasks
+                    .Where(t => t.UserId == validUserId)
                     .OrderBy(t => t.CreatedAt)
                     .Take(totalTasks - 14)
                     .ToListAsync();
@@ -98,12 +118,14 @@ namespace App.Controllers
 
             var task = new AnalysisTask
             {
+                UserId = validUserId, // <-- Ось це поле було пропущене!
                 Fen = dto.Fen,
                 TargetDepth = dto.Depth,
                 MaxMoves = dto.MaxMoves,
                 Status = "Running",
                 ProgressPercent = 0,
-                Stage = "Постановка задачі в чергу..."
+                Stage = "Постановка задачі в чергу...",
+                CreatedAt = DateTime.UtcNow
             };
 
             _db.AnalysisTasks.Add(task);
@@ -121,10 +143,10 @@ namespace App.Controllers
             if (task == null) return NotFound(new { message = "Задачу не знайдено." });
 
             var moves = task.ResultMovesJson != null
-            ? JsonSerializer.Deserialize<List<MoveHintDto>>(
-            task.ResultMovesJson,
-             new JsonSerializerOptions { PropertyNameCaseInsensitive = true })
-            : null;
+                ? JsonSerializer.Deserialize<List<MoveHintDto>>(
+                    task.ResultMovesJson,
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true })
+                : null;
 
             return Ok(new
             {
@@ -151,25 +173,77 @@ namespace App.Controllers
         [HttpGet("analyze-history")]
         public async Task<IActionResult> GetAnalysisHistory()
         {
-            var history = await _db.AnalysisTasks
+            int validUserId = await ResolveUserIdAsync();
+
+            var tasks = await _db.AnalysisTasks
+                .Where(t => t.UserId == validUserId)
                 .OrderByDescending(t => t.CreatedAt)
-                .Take(10)
+                .Take(50)
                 .Select(t => new
                 {
                     id = t.Id,
                     fen = t.Fen,
                     depth = t.TargetDepth,
+                    maxMoves = t.MaxMoves,
                     status = t.Status,
                     progress = t.ProgressPercent,
                     stage = t.Stage,
-                    createdAt = t.CreatedAt,
-                    movesJson = t.ResultMovesJson
+                    movesJson = t.ResultMovesJson,
+                    createdAt = t.CreatedAt
                 })
                 .ToListAsync();
 
-            return Ok(history);
+            return Ok(tasks);
         }
 
+        [HttpPost("save-game")]
+        public async Task<IActionResult> SaveGame([FromBody] SaveGameRequestDto dto)
+        {
+            int validUserId = await ResolveUserIdAsync();
 
+            var savedGame = new SavedGame
+            {
+                UserId = validUserId, // <-- Прив'язуємо партію до реального користувача
+                PlayerName = string.IsNullOrWhiteSpace(dto.PlayerName) ? "Гравець" : dto.PlayerName,
+                BotName = string.IsNullOrWhiteSpace(dto.BotName) ? "Бот" : dto.BotName,
+                BotElo = dto.BotElo,
+                PlayerColor = dto.PlayerColor,
+                ResultStatus = dto.ResultStatus,
+                FenHistoryJson = JsonSerializer.Serialize(dto.FenHistory ?? new List<string>()),
+                MovesSanJson = JsonSerializer.Serialize(dto.MovesSan ?? new List<string>()),
+                CreatedAt = DateTime.UtcNow
+            };
+
+            _db.SavedGames.Add(savedGame);
+            await _db.SaveChangesAsync();
+
+            return Ok(new { id = savedGame.Id });
+        }
+
+        [HttpGet("games-history")]
+        public async Task<IActionResult> GetGamesHistory()
+        {
+            int validUserId = await ResolveUserIdAsync();
+
+            var games = await _db.SavedGames
+                .Where(g => g.UserId == validUserId)
+                .OrderByDescending(g => g.CreatedAt)
+                .Take(30)
+                .Select(g => new
+                {
+                    id = g.Id,
+                    playerName = g.PlayerName,
+                    botName = g.BotName,
+                    botElo = g.BotElo,
+                    playerColor = g.PlayerColor,
+                    resultStatus = g.ResultStatus,
+                    fenHistoryJson = g.FenHistoryJson,
+                    movesSanJson = g.MovesSanJson,
+                    createdAt = g.CreatedAt
+                })
+                .ToListAsync();
+
+            return Ok(games);
+        }
     }
 }
