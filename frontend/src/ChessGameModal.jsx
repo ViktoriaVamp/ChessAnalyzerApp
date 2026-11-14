@@ -16,11 +16,13 @@ const ChessGameModal = ({ bot, user, onClose }) => {
   const [gameStatus, setGameStatus] = useState("Партія триває");
   const [isGameOver, setIsGameOver] = useState(false);
 
- 
+  const fenHistoryRef = useRef([gameRef.current.fen()]);
+  const moveHistoryRef = useRef([]);
+  const isSavedRef = useRef(false);
+
   const [moveFrom, setMoveFrom] = useState(null);
   const [optionSquares, setOptionSquares] = useState({});
 
-  
   const [analysisDepth, setAnalysisDepth] = useState(12);
   const [multiPv, setMultiPv] = useState(6);
 
@@ -38,6 +40,28 @@ const ChessGameModal = ({ bot, user, onClose }) => {
   const currentTurn = gameRef.current.turn() === "w" ? "white" : "black";
   const isBotTurn = currentTurn === botColor && !isGameOver;
   const isPlayerTurn = currentTurn === playerColor && !isGameOver;
+
+  const saveGameToDb = useCallback(
+    async (statusText) => {
+      if (isSavedRef.current || moveHistoryRef.current.length === 0) return;
+      isSavedRef.current = true;
+      try {
+        await api.post("/api/game/save-game", {
+          userId: user?.id,
+          playerName: user?.username || user?.nickname || "Ви",
+          botName: bot?.name || "Бот",
+          botElo: bot?.elo || 400,
+          playerColor: playerColor,
+          resultStatus: statusText,
+          fenHistory: fenHistoryRef.current,
+          movesSan: moveHistoryRef.current,
+        });
+      } catch (e) {
+        console.error("Помилка збереження партії:", e);
+      }
+    },
+    [user, bot, playerColor]
+  );
 
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60);
@@ -58,12 +82,14 @@ const ChessGameModal = ({ bot, user, onClose }) => {
   // Завантаження історії задач із БД (Вимога 3)
   const fetchHistory = useCallback(async () => {
     try {
-      const res = await api.get("/api/game/analyze-history");
+      const res = await api.get("/api/game/analyze-history", {
+        params: { userId: user?.id },
+      });
       setTaskHistory(res.data || []);
     } catch (e) {
       console.error("Помилка завантаження історії задач:", e);
     }
-  }, []);
+  }, [user?.id]);
 
   useEffect(() => {
     fetchHistory();
@@ -79,8 +105,10 @@ const ChessGameModal = ({ bot, user, onClose }) => {
       clearHighlights();
       if (timerRef.current) clearInterval(timerRef.current);
       if (pollingRef.current) clearInterval(pollingRef.current);
+
+      saveGameToDb(statusText);
     },
-    [clearHighlights]
+    [clearHighlights, saveGameToDb]
   );
 
   const checkGameState = useCallback(
@@ -164,15 +192,19 @@ const ChessGameModal = ({ bot, user, onClose }) => {
 
       const { from, to, promotion } = response.data;
 
-      game.move({
+      const move = game.move({
         from,
         to,
         promotion: promotion || "q",
       });
 
-      clearHighlights();
-      setFen(game.fen());
-      checkGameState(game);
+      if (move) {
+        fenHistoryRef.current.push(game.fen());
+        moveHistoryRef.current.push(move.san);
+        clearHighlights();
+        setFen(game.fen());
+        checkGameState(game);
+      }
     } catch (e) {
       console.error("Помилка ходу бота:", e.response?.data || e);
     }
@@ -188,7 +220,7 @@ const ChessGameModal = ({ bot, user, onClose }) => {
   }, [isBotTurn, fen, makeBotMove]);
 
   // Запуск аналізу позиції (Вимоги 1, 2, 3)
- const handleStartAnalysis = async () => {
+  const handleStartAnalysis = async () => {
     if (!isPlayerTurn) return;
     setValidationError("");
     setSelectedHintMove(null);
@@ -218,9 +250,10 @@ const ChessGameModal = ({ bot, user, onClose }) => {
 
     try {
       const res = await api.post("/api/game/analyze-start", {
+        userId: user?.id,
         fen: gameRef.current.fen(),
         depth: Number(analysisDepth),
-        maxMoves: Number(multiPv), // Передаємо вибраний користувачем MultiPV
+        maxMoves: Number(multiPv),
       });
 
       const { taskId } = res.data;
@@ -251,6 +284,7 @@ const ChessGameModal = ({ bot, user, onClose }) => {
       setValidationError(e.response?.data?.message || "Не вдалося запустити аналіз позиції.");
     }
   };
+
   // Скасування виконання поточної задачі (Вимога 3)
   const handleCancelAnalysis = async () => {
     if (!currentTask || currentTask.status !== "Running") return;
@@ -289,6 +323,8 @@ const ChessGameModal = ({ bot, user, onClose }) => {
         });
 
         if (move !== null) {
+          fenHistoryRef.current.push(game.fen());
+          moveHistoryRef.current.push(move.san);
           clearHighlights();
           setFen(game.fen());
           checkGameState(game);
@@ -354,6 +390,8 @@ const ChessGameModal = ({ bot, user, onClose }) => {
         return false;
       }
 
+      fenHistoryRef.current.push(game.fen());
+      moveHistoryRef.current.push(move.san);
       clearHighlights();
       setFen(game.fen());
       checkGameState(game);
@@ -382,38 +420,38 @@ const ChessGameModal = ({ bot, user, onClose }) => {
   if (isPlayerTurn) {
     Object.assign(combinedSquareStyles, optionSquares);
 
-   if (selectedHintMove) {
-        let bgColor;
-        let borderColor;
+    if (selectedHintMove) {
+      let bgColor;
+      let borderColor;
 
-        switch (selectedHintMove.quality) {
-          case "Найкращий хід":
-          case "Хороший хід":
-            bgColor = "rgba(34, 197, 94, 0.55)"; // Зелений
-            borderColor = "#4ade80";
-            break;
+      switch (selectedHintMove.quality) {
+        case "Найкращий хід":
+        case "Хороший хід":
+          bgColor = "rgba(34, 197, 94, 0.55)"; // Зелений
+          borderColor = "#4ade80";
+          break;
 
-          case "Неточність":
-            bgColor = "rgba(250, 204, 21, 0.55)"; // Жовтий
-            borderColor = "#facc15";
-            break;
+        case "Неточність":
+          bgColor = "rgba(250, 204, 21, 0.55)"; // Жовтий
+          borderColor = "#facc15";
+          break;
 
-          default: // "Помилка" та "Груба помилка (Зівок)"
-            bgColor = "rgba(239, 68, 68, 0.55)"; // Червоний
-            borderColor = "#f87171";
-            break;
-        }
-
-        combinedSquareStyles[selectedHintMove.from] = {
-          backgroundColor: "rgba(59, 130, 246, 0.55)",
-          boxShadow: "inset 0 0 0 3px #60a5fa",
-        };
-
-        combinedSquareStyles[selectedHintMove.to] = {
-          backgroundColor: bgColor,
-          boxShadow: `inset 0 0 0 3px ${borderColor}`,
-        };
+        default: // "Помилка" та "Груба помилка (Зівок)"
+          bgColor = "rgba(239, 68, 68, 0.55)"; // Червоний
+          borderColor = "#f87171";
+          break;
       }
+
+      combinedSquareStyles[selectedHintMove.from] = {
+        backgroundColor: "rgba(59, 130, 246, 0.55)",
+        boxShadow: "inset 0 0 0 3px #60a5fa",
+      };
+
+      combinedSquareStyles[selectedHintMove.to] = {
+        backgroundColor: bgColor,
+        boxShadow: `inset 0 0 0 3px ${borderColor}`,
+      };
+    }
   }
 
   const boardConfig = {
@@ -469,7 +507,7 @@ const ChessGameModal = ({ bot, user, onClose }) => {
           </button>
         </div>
 
-        {/* Контент із внутрішнім скролом (display: block забороняє Flexbox сплющувати дошку) */}
+        {/* Контент із внутрішнім скролом */}
         <div
           className={styles.content}
           style={{
@@ -497,7 +535,7 @@ const ChessGameModal = ({ bot, user, onClose }) => {
             </div>
           </div>
 
-          {/* Шахова дошка (завжди квадратна 1:1 і ніколи не обрізається) */}
+          {/* Шахова дошка */}
           <div
             className={styles.boardWrapper}
             style={{
@@ -532,7 +570,7 @@ const ChessGameModal = ({ bot, user, onClose }) => {
             </div>
           </div>
 
-          {/* ОСЬ ТУТ ВСТАВЛЕНО НАЛАШТУВАННЯ ГЛИБИНИ ТА MULTIPV (Вимога 1) */}
+          {/* Налаштування глибини та MultiPV */}
           <div
             style={{
               display: "flex",
@@ -596,19 +634,52 @@ const ChessGameModal = ({ bot, user, onClose }) => {
           </div>
 
           {validationError && (
-            <div style={{ background: "#5c1313", color: "#fca5a5", padding: "8px", borderRadius: "6px", fontSize: "13px", marginTop: "8px" }}>
+            <div
+              style={{
+                background: "#5c1313",
+                color: "#fca5a5",
+                padding: "8px",
+                borderRadius: "6px",
+                fontSize: "13px",
+                marginTop: "8px",
+              }}
+            >
               {validationError}
             </div>
           )}
 
           {/* Прогрес та стан поточної задачі */}
           {currentTask && (
-            <div style={{ background: "#1f2937", padding: "10px", borderRadius: "8px", marginTop: "8px", border: "1px solid #374151" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px", color: "#e5e7eb", marginBottom: "6px" }}>
+            <div
+              style={{
+                background: "#1f2937",
+                padding: "10px",
+                borderRadius: "8px",
+                marginTop: "8px",
+                border: "1px solid #374151",
+              }}
+            >
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  fontSize: "13px",
+                  color: "#e5e7eb",
+                  marginBottom: "6px",
+                }}
+              >
                 <span>{currentTask.stage}</span>
                 <strong>{currentTask.progress}%</strong>
               </div>
-              <div style={{ width: "100%", height: "8px", background: "#374151", borderRadius: "4px", overflow: "hidden" }}>
+              <div
+                style={{
+                  width: "100%",
+                  height: "8px",
+                  background: "#374151",
+                  borderRadius: "4px",
+                  overflow: "hidden",
+                }}
+              >
                 <div
                   style={{
                     width: `${currentTask.progress}%`,
@@ -629,7 +700,16 @@ const ChessGameModal = ({ bot, user, onClose }) => {
               {currentTask.status === "Running" && (
                 <button
                   onClick={handleCancelAnalysis}
-                  style={{ marginTop: "8px", background: "#dc2626", color: "#fff", border: "none", borderRadius: "4px", padding: "5px 10px", cursor: "pointer", fontSize: "12px" }}
+                  style={{
+                    marginTop: "8px",
+                    background: "#dc2626",
+                    color: "#fff",
+                    border: "none",
+                    borderRadius: "4px",
+                    padding: "5px 10px",
+                    cursor: "pointer",
+                    fontSize: "12px",
+                  }}
                 >
                   Скасувати виконання задачі
                 </button>
@@ -637,9 +717,19 @@ const ChessGameModal = ({ bot, user, onClose }) => {
             </div>
           )}
 
-          {/* Список проаналізованих ходів: клік підсвічує фігуру та хід на дошці */}
+          {/* Список проаналізованих ходів */}
           {currentTask && currentTask.status === "Completed" && currentTask.moves?.length > 0 && (
-            <div style={{ maxHeight: "175px", overflowY: "auto", background: "#18181b", border: "1px solid #3f3f46", borderRadius: "8px", padding: "8px", marginTop: "8px" }}>
+            <div
+              style={{
+                maxHeight: "175px",
+                overflowY: "auto",
+                background: "#18181b",
+                border: "1px solid #3f3f46",
+                borderRadius: "8px",
+                padding: "8px",
+                marginTop: "8px",
+              }}
+            >
               <div style={{ fontSize: "12px", color: "#a1a1aa", marginBottom: "6px" }}>
                 Натисніть на хід у списку, щоб підсвітити фігуру та поле на шахівниці:
               </div>
@@ -648,7 +738,8 @@ const ChessGameModal = ({ bot, user, onClose }) => {
                 const toSq = m.to || m.To;
                 const quality = m.quality || m.Quality;
                 const explanation = m.explanation || m.Explanation;
-                const isSelected = selectedHintMove?.from === fromSq && selectedHintMove?.to === toSq;
+                const isSelected =
+                  selectedHintMove?.from === fromSq && selectedHintMove?.to === toSq;
 
                 return (
                   <div
@@ -667,7 +758,15 @@ const ChessGameModal = ({ bot, user, onClose }) => {
                       border: isSelected ? "1px solid #60a5fa" : "1px solid #27272a",
                     }}
                   >
-                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: "13px", fontWeight: "bold", color: "#fff" }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        fontSize: "13px",
+                        fontWeight: "bold",
+                        color: "#fff",
+                      }}
+                    >
                       <span>
                         {fromSq?.toUpperCase()} ➔ {toSq?.toUpperCase()}
                       </span>
@@ -693,9 +792,20 @@ const ChessGameModal = ({ bot, user, onClose }) => {
             </div>
           )}
 
-          {/* Історія результатів виконання задач із БД (Вимога 3) */}
+          {/* Історія результатів виконання задач із БД */}
           {showHistory && (
-            <div style={{ maxHeight: "140px", overflowY: "auto", background: "#18181b", border: "1px solid #333", borderRadius: "8px", padding: "8px", marginTop: "8px", fontSize: "12px" }}>
+            <div
+              style={{
+                maxHeight: "140px",
+                overflowY: "auto",
+                background: "#18181b",
+                border: "1px solid #333",
+                borderRadius: "8px",
+                padding: "8px",
+                marginTop: "8px",
+                fontSize: "12px",
+              }}
+            >
               <strong style={{ color: "#e4e4e7", display: "block", marginBottom: "6px" }}>
                 Історія задач аналізу (збережено в БД):
               </strong>
@@ -711,9 +821,15 @@ const ChessGameModal = ({ bot, user, onClose }) => {
                       moves: item.movesJson ? JSON.parse(item.movesJson) : [],
                     });
                   }}
-                  style={{ padding: "5px", borderBottom: "1px solid #27272a", cursor: "pointer", color: "#d4d4d8" }}
+                  style={{
+                    padding: "5px",
+                    borderBottom: "1px solid #27272a",
+                    cursor: "pointer",
+                    color: "#d4d4d8",
+                  }}
                 >
-                  Глибина: {item.depth} | Статус: <strong>{item.status}</strong> ({item.progress}%) — {new Date(item.createdAt).toLocaleTimeString()}
+                  Глибина: {item.depth} | Статус: <strong>{item.status}</strong> ({item.progress}%)
+                  — {new Date(item.createdAt).toLocaleTimeString()}
                 </div>
               ))}
             </div>

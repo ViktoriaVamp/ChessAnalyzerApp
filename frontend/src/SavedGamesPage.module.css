@@ -1,0 +1,284 @@
+.saved-games-container {
+  background-color: #141417;
+  border: 1px solid #451a1a;
+  border-radius: 12px;
+  padding: 24px;
+  color: #fff;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+
+.saved-games-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #451a1a;
+  padding-bottom: 16px;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.back-btn {
+  background: #460000;
+  color: #fff;
+  border: 1px solid #7f1d1d;
+  border-radius: 8px;
+  padding: 8px 14px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.header-title {
+  margin: 0;
+  font-size: 22px;
+}
+
+
+.tabs-switcher {
+  display: flex;
+  gap: 10px;
+}
+
+.tab-btn {
+  background: #1f1f23;
+  color: #fff;
+  border: 1px solid #3f3f46;
+  border-radius: 8px;
+  padding: 8px 14px;
+  cursor: pointer;
+  font-weight: normal;
+  font-size: 14px;
+}
+
+.tab-btn.active {
+  background: #460000;
+  border: 1px solid #ef4444;
+  font-weight: bold;
+}
+
+
+.loading-message {
+  text-align: center;
+  padding: 40px;
+  color: #a1a1aa;
+}
+
+.empty-message {
+  color: #a1a1aa;
+  padding: 20px;
+  text-align: center;
+}
+
+
+.saved-games-grid {
+  display: grid;
+  grid-template-columns: minmax(280px, 1fr) minmax(320px, 420px);
+  gap: 24px;
+  align-items: start;
+}
+
+
+.list-column {
+  background: #18181c;
+  border: 1px solid #2d1616;
+  border-radius: 10px;
+  padding: 14px;
+  max-height: 600px;
+  overflow-y: auto;
+}
+
+
+.history-card {
+  padding: 12px 14px;
+  margin-bottom: 10px;
+  border-radius: 8px;
+  cursor: pointer;
+  background: #121215;
+  border: 1px solid #27272a;
+  transition: 0.15s;
+}
+
+.history-card.selected {
+  background: #2a1215;
+  border: 1px solid #991b1b;
+}
+
+.game-card-header {
+  display: flex;
+  justify-content: space-between;
+  font-weight: bold;
+  font-size: 15px;
+  margin-bottom: 4px;
+}
+
+.game-card-date {
+  font-size: 12px;
+  color: #a1a1aa;
+}
+
+.game-card-result {
+  font-size: 13px;
+  color: #fca5a5;
+  margin-bottom: 4px;
+}
+
+.game-card-meta {
+  font-size: 12px;
+  color: #71717a;
+}
+
+.analysis-card-header {
+  display: flex;
+  justify-content: space-between;
+  font-weight: bold;
+  font-size: 14px;
+}
+
+.analysis-card-meta {
+  font-size: 12px;
+  color: #a1a1aa;
+  margin-top: 4px;
+}
+
+
+.status-green {
+  color: #4ade80;
+}
+
+.status-yellow {
+  color: #facc15;
+}
+
+.status-red {
+  color: #f87171;
+}
+
+
+.board-column {
+  background: #18181c;
+  border: 1px solid #2d1616;
+  border-radius: 10px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.board-wrapper {
+  width: 100%;
+  max-width: 360px;
+  aspect-ratio: 1 / 1;
+  margin-bottom: 14px;
+}
+
+.controls-wrapper {
+  width: 100%;
+}
+
+/* Кнопки навігації по ходах */
+.step-controls {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.step-btn {
+  background: #460000;
+  color: #fff;
+  border: 1px solid #5c1313;
+  border-radius: 6px;
+  padding: 6px 10px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.step-btn:disabled {
+  background: #18181b;
+  color: #52525b;
+  cursor: not-allowed;
+}
+
+.step-counter {
+  font-size: 13px;
+  color: #e4e4e7;
+  min-width: 95px;
+  text-align: center;
+}
+
+/* Список ходів партії */
+.moves-list {
+  background: #121215;
+  border: 1px solid #27272a;
+  border-radius: 8px;
+  padding: 10px;
+  max-height: 130px;
+  overflow-y: auto;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.move-chip {
+  padding: 3px 7px;
+  border-radius: 4px;
+  cursor: pointer;
+  background: #27272a;
+  color: #d4d4d8;
+  border: 1px solid transparent;
+}
+
+.move-chip.active {
+  background: #460000;
+  color: #fca5a5;
+  border: 1px solid #ef4444;
+}
+
+/* Підказки аналізу */
+.analysis-hint-label {
+  font-size: 12px;
+  color: #a1a1aa;
+  margin-bottom: 8px;
+}
+
+.analysis-moves-list {
+  max-height: 190px;
+  overflow-y: auto;
+}
+
+.hint-card {
+  padding: 8px 10px;
+  margin-bottom: 6px;
+  border-radius: 6px;
+  cursor: pointer;
+  background: #121215;
+  border: 1px solid #27272a;
+}
+
+.hint-card.selected {
+  background: #27272a;
+  border: 1px solid #60a5fa;
+}
+
+.hint-card-header {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  font-weight: bold;
+}
+
+.hint-card-explanation {
+  font-size: 12px;
+  color: #d4d4d8;
+  margin-top: 3px;
+}
