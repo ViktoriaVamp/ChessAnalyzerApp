@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import styles from './MainPage.module.css';
 import api, { setAccessToken } from './api';
 import ChessGameModal from "./ChessGameModal";
+import SavedGamesPage from "./SavedGamesPage";
 
 function MainPage({ setIsAuthenticated }) {
   const navigate = useNavigate();
@@ -13,22 +14,21 @@ function MainPage({ setIsAuthenticated }) {
   const [showFriendRequests, setShowFriendRequests] = useState(false);
   const [friendRequests, setFriendRequests] = useState([]);
 
-
+  const [showSavedGames, setShowSavedGames] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
   // Список шах-ботів
   const chessBots = [
     { id: 1, name: 'Бот Новачок (Ело ~400)', elo: 400, description: 'Спокійний гравець, який іноді робить прості тактичні помилки. Ідеально для розігріву.' },
-    { id: 2, name: 'Бот Любитель (Ело ~800)',elo: 800, description: 'Агресивний бот, що шукає можливості для виграшу матеріалу та гострих атак.' },
-    { id: 3, name: 'Бот Тактик (Ело ~1200)',elo: 1200, description: 'Безкомпромісний суперник із глибоким прорахунком ходів. Виклик для досвідчених гравців.' },
+    { id: 2, name: 'Бот Любитель (Ело ~800)', elo: 800, description: 'Агресивний бот, що шукає можливості для виграшу матеріалу та гострих атак.' },
+    { id: 3, name: 'Бот Тактик (Ело ~1200)', elo: 1200, description: 'Безкомпромісний суперник із глибоким прорахунком ходів. Виклик для досвідчених гравців.' },
     { id: 4, name: 'Бот Експерт (Ело ~1600)', elo: 1600, description: 'Безкомпромісний суперник із глибоким прорахунком ходів. Виклик для досвідчених гравців.' },
-    { id: 5, name: 'Бот Майстер (Ело ~2000)',elo: 2000, description: 'Безкомпромісний суперник із глибоким прорахунком ходів. Виклик для досвідчених гравців.' }
+    { id: 5, name: 'Бот Майстер (Ело ~2000)', elo: 2000, description: 'Безкомпромісний суперник із глибоким прорахунком ходів. Виклик для досвідчених гравців.' }
   ];
 
   useEffect(() => {
     const fetchUserData = async () => {
       try {
-       
         const [profileResponse, requestsResponse] = await Promise.all([
           api.get('/api/user/profile'),
           api.get('/api/user/friend-requests') 
@@ -58,7 +58,7 @@ function MainPage({ setIsAuthenticated }) {
     }
   };
 
- const handleAcceptFriend = async (id) => {
+  const handleAcceptFriend = async (id) => {
     try {
       await api.post(`/api/user/friends/${id}/accept`); 
       
@@ -73,7 +73,7 @@ function MainPage({ setIsAuthenticated }) {
 
   const handleRejectFriend = async (id) => {
     try {
-      await api.delete(`/api/friends/reject/{senderId}`); 
+      await api.delete(`/api/friends/reject/${id}`); 
       
       setFriendRequests(prev => prev.filter(req => req.id !== id));
     } catch (error) {
@@ -82,11 +82,10 @@ function MainPage({ setIsAuthenticated }) {
   };
 
   const handleSearchKeyDown = (e) => {
-  if (e.key === 'Enter' && searchQuery.trim()) {
-  
-    navigate(`/user/${searchQuery.trim()}`);
-  }
-};
+    if (e.key === 'Enter' && searchQuery.trim()) {
+      navigate(`/user/${searchQuery.trim()}`);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -98,11 +97,7 @@ function MainPage({ setIsAuthenticated }) {
 
   return (
     <div className={styles.pageContainer}>
-      
-     
       <header className={styles.header}>
-        
-      
         <div className={styles.searchWrapper}>
           <input 
             type="text" 
@@ -114,17 +109,14 @@ function MainPage({ setIsAuthenticated }) {
           />
         </div>
 
-       <div className={styles.actionsWrapper}>
-          
-        
+        <div className={styles.actionsWrapper}>
           <button 
-            onClick={() => navigate('/saved-games')}
-            className={styles.actionButton}
+            className={styles.navBtn}
+            onClick={() => setShowSavedGames(true)}
           >
             📁 Збережені партії
           </button>
 
-        
           <button 
             onClick={() => navigate('/statistics')}
             className={styles.actionButton}
@@ -132,7 +124,6 @@ function MainPage({ setIsAuthenticated }) {
             📊 Статистика
           </button>
 
-         
           <div className={styles.bellContainer}>
             <button 
               onClick={() => setShowFriendRequests(!showFriendRequests)}
@@ -146,7 +137,6 @@ function MainPage({ setIsAuthenticated }) {
               )}
             </button>
 
-           
             {showFriendRequests && (
               <div className={styles.dropdownMenu}>
                 <h4 className={styles.dropdownTitle}>Запити в друзі</h4>
@@ -169,7 +159,6 @@ function MainPage({ setIsAuthenticated }) {
             )}
           </div>
 
-        
           <button 
             onClick={handleLogout}
             className={styles.logoutButton}
@@ -181,11 +170,7 @@ function MainPage({ setIsAuthenticated }) {
 
       {/* --- Основний контент --- */}
       <div className={styles.contentGrid}>
-        
-        {/* Колонка профілю */}
         <div className={styles.profileCard}>
-          
-          {/* Круг для аватарки */}
           <div className={styles.avatarCircle}>
             {userInfo?.avatarUrl ? (
               <img src={userInfo.avatarUrl} alt="Avatar" className={styles.avatarImg} />
@@ -211,33 +196,38 @@ function MainPage({ setIsAuthenticated }) {
           </div>
         </div>
 
-        {/* Колонка контенту: Список шах-ботів */}
+        {/* --- Блок ботів або Збережених партій --- */}
         <div className={styles.botsSectionContainer}>
-          <div className={styles.botsCard}>
-            <h2 className={styles.botsTitle}>Гра з шах-ботами</h2>
-            
-            <div className={styles.botsList}>
-              {chessBots.map(bot => (
-                <div key={bot.id} className={styles.botItem}>
-                  <div className={styles.botInfo}>
-                    <h4 className={styles.botName}>{bot.name}</h4>
-                    <p className={styles.botDesc}>{bot.description}</p>
+          {showSavedGames ? (
+            <SavedGamesPage
+              user={userInfo}
+              onBack={() => setShowSavedGames(false)}
+            />
+          ) : (
+            <div className={styles.botsCard}>
+              <h2 className={styles.botsTitle}>Гра з шах-ботами</h2>
+              
+              <div className={styles.botsList}>
+                {chessBots.map(bot => (
+                  <div key={bot.id} className={styles.botItem}>
+                    <div className={styles.botInfo}>
+                      <h4 className={styles.botName}>{bot.name}</h4>
+                      <p className={styles.botDesc}>{bot.description}</p>
+                    </div>
+                    <button 
+                      onClick={() => setSelectedBot(bot)}
+                      className={styles.playBotBtn}
+                    >
+                      Почати гру
+                    </button>
                   </div>
-                  <button 
-                    onClick={() => setSelectedBot(bot)}
-                    className={styles.playBotBtn}
-                  >
-                    Почати гру
-                  </button>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </div>
-
       </div>
 
-      {/* --- Модальне вікно шахової партії --- */}
       {selectedBot && (
         <ChessGameModal
           bot={selectedBot}
@@ -245,7 +235,6 @@ function MainPage({ setIsAuthenticated }) {
           onClose={() => setSelectedBot(null)}
         />
       )}
-
     </div>
   );
 }
