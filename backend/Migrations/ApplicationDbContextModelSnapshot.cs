@@ -55,7 +55,14 @@ namespace App.Migrations
                     b.Property<int>("TargetDepth")
                         .HasColumnType("integer");
 
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
+
                     b.HasKey("Id");
+
+                    b.HasIndex("Id");
+
+                    b.HasIndex("UserId");
 
                     b.ToTable("AnalysisTasks");
                 });
@@ -123,6 +130,54 @@ namespace App.Migrations
                     b.ToTable("RefreshTokens");
                 });
 
+            modelBuilder.Entity("App.Models.SavedGame", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("BotElo")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("BotName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("FenHistoryJson")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("MovesSanJson")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("PlayerColor")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("PlayerName")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("ResultStatus")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("UserId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("SavedGames");
+                });
+
             modelBuilder.Entity("App.Models.User", b =>
                 {
                     b.Property<int>("Id")
@@ -163,6 +218,17 @@ namespace App.Migrations
                     b.ToTable("Users");
                 });
 
+            modelBuilder.Entity("App.Models.AnalysisTask", b =>
+                {
+                    b.HasOne("App.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("App.Models.Friendship", b =>
                 {
                     b.HasOne("App.Models.User", "Friend")
@@ -183,6 +249,17 @@ namespace App.Migrations
                 });
 
             modelBuilder.Entity("App.Models.RefreshToken", b =>
+                {
+                    b.HasOne("App.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("App.Models.SavedGame", b =>
                 {
                     b.HasOne("App.Models.User", "User")
                         .WithMany()
