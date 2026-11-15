@@ -111,7 +111,8 @@ namespace App.Controllers
             {
                 HttpOnly = true,
                 Secure = true,
-                SameSite = SameSiteMode.Lax
+                SameSite = SameSiteMode.Lax,
+                Path = "/"
             });
 
             return Ok(new { message = result.Error });

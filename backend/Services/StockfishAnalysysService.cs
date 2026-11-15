@@ -21,27 +21,42 @@ namespace App.Services
             PropertyNameCaseInsensitive = true
         };
 
-        public StockfishAnalysisService(IServiceScopeFactory scopeFactory, IWebHostEnvironment env)
+        public StockfishAnalysisService(IServiceScopeFactory scopeFactory)
         {
             _scopeFactory = scopeFactory;
 
           
-            _stockfishPath = Path.Combine(
-                env.ContentRootPath,
-                "StockFish",
-                "stockfish-windows-x86-64-universal.exe"
-            );
+            _stockfishPath = Environment.GetEnvironmentVariable("STOCKFISH_PATH")
+                 ?? Path.Combine(AppContext.BaseDirectory, "StockFish", "stockfish-windows-x86-64-universal.exe");  
+           
         }
 
-        public bool CancelTask(Guid taskId)
+        public async Task<bool> CancelTaskAsync(Guid taskId)
         {
+            bool cancelledLocally = false;
             if (ActiveTokens.TryRemove(taskId, out var cts))
             {
                 cts.Cancel();
                 cts.Dispose();
+                cancelledLocally = true;
+            }
+
+            using var scope = _scopeFactory.CreateScope();
+            var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+
+            var task = await db.AnalysisTasks.FindAsync(taskId);
+            if (task == null)
+                return false;
+
+            if (task.Status == "Running")
+            {
+                task.Status = "Cancelled";
+                task.Stage = "Виконання скасовано користувачем.";
+                await db.SaveChangesAsync();
                 return true;
             }
-            return false;
+
+            return cancelledLocally;
         }
 
         public void StartBackgroundAnalysis(Guid taskId, string fen, int targetDepth, int maxMoves)
@@ -181,10 +196,21 @@ namespace App.Services
             var task = await db.AnalysisTasks.FindAsync(taskId);
             if (task != null)
             {
+                if (task.Status == "Cancelled")
+                {
+                    if (ActiveTokens.TryRemove(taskId, out var cts))
+                    {
+                        cts.Cancel();
+                        cts.Dispose();
+                    }
+                    return;
+                }
+
                 task.ProgressPercent = percent;
                 task.Stage = stage;
                 await db.SaveChangesAsync();
             }
+
         }
 
         private static void ParseInfoLine(

@@ -11,11 +11,8 @@ namespace App.Services
 
         public StockfishService()
         {
-            _stockfishPath = Path.Combine(
-                AppDomain.CurrentDomain.BaseDirectory,
-                "Stockfish",
-                "stockfish-windows-x86-64-universal.exe"
-            );
+            _stockfishPath = Environment.GetEnvironmentVariable("STOCKFISH_PATH")
+                  ?? Path.Combine(AppContext.BaseDirectory, "StockFish", "stockfish-windows-x86-64-universal.exe");
         }
 
         public async Task<string> GetBestMoveAsync(string fen, int elo, CancellationToken cancellationToken)
