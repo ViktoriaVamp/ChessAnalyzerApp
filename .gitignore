@@ -32,3 +32,5 @@ build/
 ## --- Secrets & Local Configs ---
 *.env
 *.pem
+nginx/certs/
+frontend/dist/

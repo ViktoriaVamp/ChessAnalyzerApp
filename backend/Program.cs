@@ -1,6 +1,7 @@
-using App.Services;
 using App.IServices;
+using App.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
@@ -30,7 +31,10 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowFrontend", policy =>
     {
-        policy.WithOrigins("https://localhost:5173") 
+        policy.WithOrigins("https://localhost:5173",
+                "http://localhost:5173",
+                "https://chess.local",
+                "https://localhost") 
               .AllowAnyHeader()
               .AllowAnyMethod()
               .AllowCredentials(); 
@@ -50,7 +54,7 @@ builder.Services.AddAuthentication(options =>
 })
 .AddJwtBearer(options =>
 {
-    options.RequireHttpsMetadata = true;
+    options.RequireHttpsMetadata = false;
    
     options.SaveToken = true;
     options.TokenValidationParameters = new TokenValidationParameters
@@ -72,6 +76,12 @@ builder.Services.AddOpenApi();
 
 var app = builder.Build();
 
+app.UseForwardedHeaders(new ForwardedHeadersOptions
+{
+    ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto
+});
+
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -79,13 +89,26 @@ if (app.Environment.IsDevelopment())
 
 }
 
-app.UseHttpsRedirection();
+if (string.IsNullOrEmpty(Environment.GetEnvironmentVariable("SERVER_NAME")))
+{
+    app.UseHttpsRedirection();
+}
+
 app.UseRouting();
 
 app.UseCors("AllowFrontend");
 
 app.UseAuthentication();
 app.UseAuthorization();
+
+
+var serverName = Environment.GetEnvironmentVariable("SERVER_NAME") ?? Environment.MachineName;
+
+app.Use(async (context, next) =>
+{
+    context.Response.Headers["X-Handled-By-Server"] = serverName;
+    await next();
+});
 
 app.MapControllers();
 app.Run();

@@ -20,8 +20,8 @@ const processQueue = (error, token = null) => {
 };
 
 const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'https://localhost:7028',
-  withCredentials: true 
+  baseURL: import.meta.env.VITE_API_BASE_URL ?? (window.location.port === '5173' ? 'https://localhost:7028' : ''),
+  withCredentials: true
 });
 
 api.interceptors.request.use(

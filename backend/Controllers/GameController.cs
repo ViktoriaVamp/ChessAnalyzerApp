@@ -161,13 +161,14 @@ namespace App.Controllers
         }
 
         [HttpPost("analyze-cancel/{taskId:guid}")]
-        public IActionResult CancelAnalysis(Guid taskId)
+        public async Task<IActionResult> CancelAnalysis(Guid taskId)
         {
-            bool cancelled = _analysisService.CancelTask(taskId);
+            bool cancelled = await _analysisService.CancelTaskAsync(taskId);
             if (!cancelled)
                 return BadRequest(new { message = "Задачу вже завершено або не знайдено." });
 
             return Ok(new { message = "Запит на скасування відправлено." });
+
         }
 
         [HttpGet("analyze-history")]
