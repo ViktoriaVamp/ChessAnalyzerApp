@@ -89,21 +89,21 @@ namespace App.Controllers
             if (string.IsNullOrWhiteSpace(dto.Fen))
                 return BadRequest(new { message = "Позиція FEN є обов'язковою." });
 
-            if (dto.Depth < 1 || dto.Depth > 16 || dto.MaxMoves < 1 || dto.MaxMoves > 20)
+            if (dto.Depth < 1 || dto.Depth > 22 || dto.MaxMoves < 1 || dto.MaxMoves > 20)
             {
                 return BadRequest(new
                 {
-                    message = "Перевищено максимальну трудомісткість задачі! Максимальна глибина: 16, максимум варіантів: 20."
+                    message = "Перевищено максимальну трудомісткість задачі! Максимальна глибина: 22, максимум варіантів: 20."
                 });
             }
 
             int validUserId = await ResolveUserIdAsync();
 
             bool hasRunningTask = await _db.AnalysisTasks.AnyAsync(t => t.UserId == validUserId && t.Status == "Running");
-            if (hasRunningTask)
+           /* if (hasRunningTask)
             {
                 return BadRequest(new { message = "У вас вже виконується задача аналізу. Зачекайте або скасуйте її." });
-            }
+            }*/
 
             int totalTasks = await _db.AnalysisTasks.CountAsync(t => t.UserId == validUserId);
             if (totalTasks >= 15)
@@ -118,11 +118,11 @@ namespace App.Controllers
 
             var task = new AnalysisTask
             {
-                UserId = validUserId, // <-- Ось це поле було пропущене!
+                UserId = validUserId, 
                 Fen = dto.Fen,
                 TargetDepth = dto.Depth,
                 MaxMoves = dto.MaxMoves,
-                Status = "Running",
+                Status = "Queued",
                 ProgressPercent = 0,
                 Stage = "Постановка задачі в чергу...",
                 CreatedAt = DateTime.UtcNow

@@ -111,7 +111,7 @@ function MainPage({ setIsAuthenticated }) {
 
         <div className={styles.actionsWrapper}>
           <button 
-            className={styles.navBtn}
+            className={styles.savingsBtn}
             onClick={() => setShowSavedGames(true)}
           >
             📁 Збережені партії

@@ -61,6 +61,18 @@
   border-radius: 6px;
   cursor: pointer;
 }
+.savingsBtn{
+  background-color: var(--red-d);
+  color: var(--text);
+  border: 1px solid var(--red-l);
+  padding: 8px 14px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.savingsBtn:hover{
+  background-color: var(--red-dd);
+}
 
 .logoutButton {
   background-color: var(--red-dd);
