@@ -58,10 +58,14 @@ namespace App.Services
 
             return cancelledLocally;
         }
+        private const int MaxClusterConcurrentTasks = 1;
+        private const int EstimatedSecondsPerTask = 12;
+
+        private static readonly SemaphoreSlim QueueCheckLock = new(1, 1);
 
         public void StartBackgroundAnalysis(Guid taskId, string fen, int targetDepth, int maxMoves)
         {
-            var cts = new CancellationTokenSource(TimeSpan.FromSeconds(25)); 
+            var cts = new CancellationTokenSource(TimeSpan.FromSeconds(120));
             ActiveTokens[taskId] = cts;
 
             _ = Task.Run(async () =>
@@ -72,8 +76,92 @@ namespace App.Services
 
                 try
                 {
-                    await UpdateProgressAsync(db, taskId, 5, "Запуск процесу Stockfish...");
+                    while (true)
+                    {
+                        cts.Token.ThrowIfCancellationRequested();
 
+                        bool canStart = false;
+                        int queuePosition = 1;
+                        int estimatedWaitSeconds = EstimatedSecondsPerTask;
+                        await QueueCheckLock.WaitAsync(cts.Token);
+                        try
+                        {
+                            var currentTask = await db.AnalysisTasks.FindAsync(taskId);
+                            if (currentTask == null) return;
+
+                            await db.Entry(currentTask).ReloadAsync(cts.Token);
+                            if (currentTask.Status == "Cancelled")
+                            {
+                                throw new OperationCanceledException();
+                            }
+
+                            // 1. Завантажуємо всі активні ("Running") задачі у кластері (без кешування EF, щоб бачити свіжі відсотки!)
+                            var runningTasks = await db.AnalysisTasks
+                                .AsNoTracking()
+                                .Where(t => t.Status == "Running" && t.Id != taskId)
+                                .ToListAsync(cts.Token);
+
+                            // 2. Завантажуємо всі задачі у черзі ("Queued"), які були створені РАНІШЕ за нашу
+                            var tasksAheadInQueue = await db.AnalysisTasks
+                                .AsNoTracking()
+                                .Where(t => (t.Status == "Queued" || t.Status == "Pending")
+                                            && t.CreatedAt < currentTask.CreatedAt
+                                            && t.Id != taskId)
+                                .ToListAsync(cts.Token);
+
+                            int runningCount = runningTasks.Count;
+                            int aheadInQueue = tasksAheadInQueue.Count;
+
+                            if (runningCount < MaxClusterConcurrentTasks && aheadInQueue == 0)
+                            {
+                                // Ресурси звільнилися і ми перші в черзі — займаємо слот!
+                                currentTask.Status = "Running";
+                                currentTask.ProgressPercent = 5;
+                                currentTask.Stage = "Ресурси виділено. Запуск процесу Stockfish...";
+                                await db.SaveChangesAsync(cts.Token);
+                                canStart = true;
+                            }
+                            else
+                            {
+                                // Динамічний розрахунок часу очікування на основі прогресу активних задач і глибини!
+                                double totalRemainingSeconds = 0;
+
+                                // Додаємо залишок часу тих задач, які ЗАРАЗ виконуються (враховуючи їхній ProgressPercent та Depth)
+                                foreach (var rt in runningTasks)
+                                {
+                                    double fullTaskSeconds = Math.Max(6.0, rt.TargetDepth * 0.65); // напр., для глибини 12 це ~8 сек, для 20 -> ~13 сек
+                                    double remainingFraction = Math.Clamp((100.0 - rt.ProgressPercent) / 100.0, 0.05, 1.0);
+                                    totalRemainingSeconds += fullTaskSeconds * remainingFraction;
+                                }
+
+                                // Додаємо повний час тих задач, які стоять у черзі ПЕРЕД нами
+                                foreach (var qt in tasksAheadInQueue)
+                                {
+                                    double fullTaskSeconds = Math.Max(6.0, qt.TargetDepth * 0.65);
+                                    totalRemainingSeconds += fullTaskSeconds;
+                                }
+
+                                // Ділимо на кількість доступних слотів кластера та округлюємо вгору
+                                estimatedWaitSeconds = Math.Max(1, (int)Math.Ceiling(totalRemainingSeconds / MaxClusterConcurrentTasks));
+                                queuePosition = aheadInQueue + 1;
+
+                                currentTask.Status = "Queued";
+                                currentTask.ProgressPercent = 0;
+                                currentTask.Stage = $"Всі ресурси зайняті. Ви у черзі (позиція #{queuePosition}). Орієнтовний час очікування: ~{estimatedWaitSeconds} с...";
+                                await db.SaveChangesAsync(cts.Token);
+                            }
+                        }
+                        finally
+                        {
+                            QueueCheckLock.Release();
+                        }
+                        if (canStart) break;
+
+                       
+                        await Task.Delay(1000, cts.Token);
+                    }
+
+                
                     if (!File.Exists(_stockfishPath))
                     {
                         throw new FileNotFoundException($"Не знайдено файл рушія за шляхом: {_stockfishPath}");
@@ -101,8 +189,8 @@ namespace App.Services
 
                     while (!reader.EndOfStream)
                     {
-                        cts.Token.ThrowIfCancellationRequested();
-                        if (await reader.ReadLineAsync() == "readyok") break;
+                        var line = await reader.ReadLineAsync(cts.Token);
+                        if (line == "readyok") break;
                     }
 
                     await UpdateProgressAsync(db, taskId, 15, "Передача позиції та початок розрахунку...");
@@ -111,31 +199,33 @@ namespace App.Services
 
                     var movesByPv = new Dictionary<int, (string Move, double Score, int? Mate, string[] Line)>();
                     int lastReportedDepth = 0;
+                    var lastDbUpdateTime = DateTime.UtcNow;
 
                     while (!reader.EndOfStream)
                     {
-                        cts.Token.ThrowIfCancellationRequested();
-
-                        var line = await reader.ReadLineAsync();
+                        var line = await reader.ReadLineAsync(cts.Token);
                         if (string.IsNullOrEmpty(line)) continue;
 
                         if (line.StartsWith("info depth"))
                         {
                             ParseInfoLine(line, movesByPv, out int currentDepth);
 
-                            // Оновлюємо прогрес у БД при переході на нову глибину (Вимога 2)
                             if (currentDepth > lastReportedDepth && currentDepth <= targetDepth)
                             {
                                 lastReportedDepth = currentDepth;
                                 int percent = 15 + (int)Math.Round((double)currentDepth / targetDepth * 75);
-                                await UpdateProgressAsync(
-                                    db,
-                                    taskId,
-                                    percent,
-                                    $"Аналіз дерева ходів: глибина {currentDepth} із {targetDepth}..."
-                                );
 
-                                // Невелика затримка, щоб прогрес плавно оновлювався на UI і задачу можна було скасувати
+                               
+                                if ((DateTime.UtcNow - lastDbUpdateTime).TotalMilliseconds >= 200 || currentDepth == targetDepth)
+                                {
+                                    await UpdateProgressAsync(
+                                        db,
+                                        taskId,
+                                        percent,
+                                        $"Аналіз дерева ходів: глибина {currentDepth} із {targetDepth}..."
+                                    );
+                                    lastDbUpdateTime = DateTime.UtcNow;
+                                }
                                 await Task.Delay(250, cts.Token);
                             }
                         }
@@ -146,17 +236,22 @@ namespace App.Services
                     }
 
                     await UpdateProgressAsync(db, taskId, 95, "Формування оцінок та пояснень ходів...");
-                    await Task.Delay(200, cts.Token);
 
                     var resultHints = BuildMoveExplanations(movesByPv);
                     var taskEntity = await db.AnalysisTasks.FindAsync(taskId);
                     if (taskEntity != null)
                     {
+                        await db.Entry(taskEntity).ReloadAsync(cts.Token);
+                        if (taskEntity.Status == "Cancelled")
+                        {
+                            throw new OperationCanceledException();
+                        }
+
                         taskEntity.Status = "Completed";
                         taskEntity.ProgressPercent = 100;
                         taskEntity.Stage = "Аналіз успішно завершено";
                         taskEntity.ResultMovesJson = JsonSerializer.Serialize(resultHints, JsonOptions);
-                        await db.SaveChangesAsync();
+                        await db.SaveChangesAsync(cts.Token);
                     }
                 }
                 catch (OperationCanceledException)
@@ -183,34 +278,30 @@ namespace App.Services
                 {
                     if (process is { HasExited: false })
                     {
-                        try { process.Kill(); } catch { }
+                        try { process.Kill(true); } catch { }
                     }
                     process?.Dispose();
                     ActiveTokens.TryRemove(taskId, out _);
+                    cts.Dispose();
                 }
             });
         }
-
         private static async Task UpdateProgressAsync(ApplicationDbContext db, Guid taskId, int percent, string stage)
         {
             var task = await db.AnalysisTasks.FindAsync(taskId);
             if (task != null)
-            {
+           {  
+               await db.Entry(task).ReloadAsync();
+
                 if (task.Status == "Cancelled")
                 {
-                    if (ActiveTokens.TryRemove(taskId, out var cts))
-                    {
-                        cts.Cancel();
-                        cts.Dispose();
-                    }
-                    return;
+                    throw new OperationCanceledException();
                 }
 
                 task.ProgressPercent = percent;
                 task.Stage = stage;
                 await db.SaveChangesAsync();
             }
-
         }
 
         private static void ParseInfoLine(

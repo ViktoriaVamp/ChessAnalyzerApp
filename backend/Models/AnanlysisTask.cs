@@ -14,7 +14,7 @@ namespace App.Models
         public int TargetDepth { get; set; }
         public int MaxMoves { get; set; }
 
-        public string Status { get; set; } = "Running";
+        public string Status { get; set; } = "Queued";
         public int ProgressPercent { get; set; } = 0;
         public string Stage { get; set; } = "Ініціалізація задачі...";
 

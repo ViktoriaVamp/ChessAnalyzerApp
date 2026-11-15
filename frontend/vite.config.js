@@ -9,6 +9,14 @@ export default defineConfig({
   ],
   server: {
     https: true,
-    port: 5173
+    port: 5173,
+    
+    proxy: {
+      '/api': {
+        target: 'https://chess.local',
+        changeOrigin: true,
+        secure: false 
+      }
+    }
   }
 });

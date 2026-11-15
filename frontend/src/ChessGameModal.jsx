@@ -4,7 +4,7 @@ import { Chessboard } from "react-chessboard";
 import styles from "./ChessGameModal.module.css";
 import api from "./api";
 
-const MAX_ALLOWED_DEPTH = 16;
+const MAX_ALLOWED_DEPTH = 22;
 const MAX_ALLOWED_MOVES = 20;
 
 const ChessGameModal = ({ bot, user, onClose }) => {
@@ -79,7 +79,6 @@ const ChessGameModal = ({ bot, user, onClose }) => {
     clearHighlights();
   }, [fen, clearHighlights]);
 
-  // Завантаження історії задач із БД (Вимога 3)
   const fetchHistory = useCallback(async () => {
     try {
       const res = await api.get("/api/game/analyze-history", {
@@ -219,7 +218,7 @@ const ChessGameModal = ({ bot, user, onClose }) => {
     }
   }, [isBotTurn, fen, makeBotMove]);
 
-  // Запуск аналізу позиції (Вимоги 1, 2, 3)
+
   const handleStartAnalysis = async () => {
     if (!isPlayerTurn) return;
     setValidationError("");
@@ -227,7 +226,6 @@ const ChessGameModal = ({ bot, user, onClose }) => {
 
     const legalMovesCount = gameRef.current.moves().length;
 
-    // ВИМОГА 1: Перевірка глибини (складності обчислення) на клієнті
     if (analysisDepth < 1 || analysisDepth > MAX_ALLOWED_DEPTH) {
       setValidationError(
         `Помилка: глибина (${analysisDepth}) має бути в межах від 1 до ${MAX_ALLOWED_DEPTH}!`
@@ -235,7 +233,6 @@ const ChessGameModal = ({ bot, user, onClose }) => {
       return;
     }
 
-    // ВИМОГА 1: Перевірка MultiPV (кількості невідомих варіантів) на клієнті
     if (multiPv < 1 || multiPv > MAX_ALLOWED_MOVES) {
       setValidationError(
         `Помилка: MultiPV (${multiPv}) перевищує ліміт варіантів (дозволено від 1 до ${MAX_ALLOWED_MOVES})!`
@@ -259,9 +256,9 @@ const ChessGameModal = ({ bot, user, onClose }) => {
       const { taskId } = res.data;
       setCurrentTask({
         id: taskId,
-        status: "Running",
+        status: "Queued",
         progress: 0,
-        stage: "Ініціалізація задачі...",
+        stage: "Перевірка доступних ресурсів системи...",
         moves: [],
       });
 
@@ -272,7 +269,11 @@ const ChessGameModal = ({ bot, user, onClose }) => {
           const data = statusRes.data;
           setCurrentTask(data);
 
-          if (data.status !== "Running") {
+          if (
+            data.status !== "Running" &&
+            data.status !== "Queued" &&
+            data.status !== "Pending"
+          ) {
             clearInterval(pollingRef.current);
             fetchHistory();
           }
@@ -281,20 +282,27 @@ const ChessGameModal = ({ bot, user, onClose }) => {
         }
       }, 300);
     } catch (e) {
-      setValidationError(e.response?.data?.message || "Не вдалося запустити аналіз позиції.");
+      setValidationError(
+        e.response?.data?.message || "Не вдалося запустити аналіз позиції."
+      );
     }
   };
 
-  // Скасування виконання поточної задачі (Вимога 3)
   const handleCancelAnalysis = async () => {
-    if (!currentTask || currentTask.status !== "Running") return;
+    if (
+      !currentTask ||
+      (currentTask.status !== "Running" &&
+        currentTask.status !== "Queued" &&
+        currentTask.status !== "Pending")
+    ) {
+      return;
+    }
     try {
       await api.post(`/api/game/analyze-cancel/${currentTask.id}`);
     } catch (e) {
       console.error("Помилка скасування:", e);
     }
   };
-
   const handleSquareClick = (arg1) => {
     const game = gameRef.current;
     const liveTurnColor = game.turn() === "w" ? "white" : "black";
@@ -415,7 +423,7 @@ const ChessGameModal = ({ bot, user, onClose }) => {
     handleGameOver("Ви здалися. Перемога бота.");
   };
 
-  // Формуємо стилі підсвічування: або крапочки ходів, або вибраний хід зі списку підказок
+
   const combinedSquareStyles = {};
   if (isPlayerTurn) {
     Object.assign(combinedSquareStyles, optionSquares);
