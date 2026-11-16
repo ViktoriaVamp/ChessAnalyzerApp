@@ -20,6 +20,8 @@ namespace App.Models
 
         public string? ResultMovesJson { get; set; }
         public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
+        public string? ServerName { get; set; }
     }
 
     public class SavedGame

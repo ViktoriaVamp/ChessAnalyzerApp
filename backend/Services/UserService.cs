@@ -37,7 +37,8 @@ namespace App.Services
                 Username = user.Username,
                 Email = user.Email,
                 CreatedAt = user.CreatedAt,
-                FriendsCount = friendsCount
+                FriendsCount = friendsCount,
+                Role = user.Role
             };
 
             return Result<UserProfileDto>.Success(profileDto);
@@ -64,7 +65,9 @@ namespace App.Services
                 Username = user.Username,
                 Email = user.Email,
                 CreatedAt = user.CreatedAt,
-                FriendsCount = friendsCount
+                FriendsCount = friendsCount,
+                Role = user.Role
+
             };
 
             return Result<UserProfileDto>.Success(profileDto);

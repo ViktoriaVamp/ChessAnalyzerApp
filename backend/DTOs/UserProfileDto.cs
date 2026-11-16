@@ -7,5 +7,6 @@
             public string Email { get; set; }
             public DateTime CreatedAt { get; set; }
             public int FriendsCount { get; set; }
-        }
+            public string Role { get; set; }
+    }
 }

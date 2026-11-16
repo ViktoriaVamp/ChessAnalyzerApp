@@ -106,12 +106,12 @@ namespace App.Controllers
             }*/
 
             int totalTasks = await _db.AnalysisTasks.CountAsync(t => t.UserId == validUserId);
-            if (totalTasks >= 15)
+            if (totalTasks >= 40)
             {
                 var oldestTasks = await _db.AnalysisTasks
                     .Where(t => t.UserId == validUserId)
                     .OrderBy(t => t.CreatedAt)
-                    .Take(totalTasks - 14)
+                    .Take(totalTasks - 39)
                     .ToListAsync();
                 _db.AnalysisTasks.RemoveRange(oldestTasks);
             }
