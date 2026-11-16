@@ -33,10 +33,6 @@ const ChessGameModal = ({ bot, user, onClose }) => {
   const [showHistory, setShowHistory] = useState(false);
   const pollingRef = useRef(null);
 
-  const [playerTime, setPlayerTime] = useState(600);
-  const [botTime, setBotTime] = useState(600);
-  const timerRef = useRef(null);
-
   const currentTurn = gameRef.current.turn() === "w" ? "white" : "black";
   const isBotTurn = currentTurn === botColor && !isGameOver;
   const isPlayerTurn = currentTurn === playerColor && !isGameOver;
@@ -62,12 +58,6 @@ const ChessGameModal = ({ bot, user, onClose }) => {
     },
     [user, bot, playerColor]
   );
-
-  const formatTime = (seconds) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
-  };
 
   const clearHighlights = useCallback(() => {
     setMoveFrom(null);
@@ -507,7 +497,7 @@ const ChessGameModal = ({ bot, user, onClose }) => {
           boxShadow: "0 12px 36px rgba(0, 0, 0, 0.9)",
         }}
       >
-        {/* Фіксована шапка */}
+
         <div className={styles.header} style={{ flexShrink: 0 }}>
           <h2 className={styles.title}>{bot?.name || "Бот"}</h2>
           <button className={styles.closeBtn} onClick={onClose}>
@@ -515,7 +505,6 @@ const ChessGameModal = ({ bot, user, onClose }) => {
           </button>
         </div>
 
-        {/* Контент із внутрішнім скролом */}
         <div
           className={styles.content}
           style={{
@@ -527,7 +516,7 @@ const ChessGameModal = ({ bot, user, onClose }) => {
             padding: "12px 16px 20px",
           }}
         >
-          {/* Картка суперника (Бота) */}
+          
           <div className={`${styles.playerCard} ${isBotTurn ? styles.activeTurnCard : ""}`}>
             <div className={styles.playerInfo}>
               <div className={styles.avatar}>B</div>
@@ -538,12 +527,8 @@ const ChessGameModal = ({ bot, user, onClose }) => {
                 </span>
               </div>
             </div>
-            <div className={`${styles.timer} ${isBotTurn ? styles.activeTimer : ""}`}>
-              {formatTime(botTime)}
-            </div>
           </div>
 
-          {/* Шахова дошка */}
           <div
             className={styles.boardWrapper}
             style={{
@@ -558,7 +543,6 @@ const ChessGameModal = ({ bot, user, onClose }) => {
             <Chessboard {...boardConfig} options={boardConfig} />
           </div>
 
-          {/* Картка гравця */}
           <div className={`${styles.playerCard} ${isPlayerTurn ? styles.activeTurnCard : ""}`}>
             <div className={styles.playerInfo}>
               <div className={styles.avatar}>
@@ -573,12 +557,8 @@ const ChessGameModal = ({ bot, user, onClose }) => {
                 </span>
               </div>
             </div>
-            <div className={`${styles.timer} ${isPlayerTurn ? styles.activeTimer : ""}`}>
-              {formatTime(playerTime)}
-            </div>
           </div>
 
-          {/* Налаштування глибини та MultiPV */}
           <div
             style={{
               display: "flex",
@@ -656,7 +636,6 @@ const ChessGameModal = ({ bot, user, onClose }) => {
             </div>
           )}
 
-          {/* Прогрес та стан поточної задачі */}
           {currentTask && (
             <div
               style={{
@@ -725,7 +704,6 @@ const ChessGameModal = ({ bot, user, onClose }) => {
             </div>
           )}
 
-          {/* Список проаналізованих ходів */}
           {currentTask && currentTask.status === "Completed" && currentTask.moves?.length > 0 && (
             <div
               style={{
@@ -800,7 +778,6 @@ const ChessGameModal = ({ bot, user, onClose }) => {
             </div>
           )}
 
-          {/* Історія результатів виконання задач із БД */}
           {showHistory && (
             <div
               style={{
@@ -845,7 +822,6 @@ const ChessGameModal = ({ bot, user, onClose }) => {
 
           {isGameOver && <div className={styles.gameOverBanner}>{gameStatus}</div>}
 
-          {/* Панель дій */}
           <div className={styles.actions} style={{ marginTop: "10px" }}>
             <button
               className={`${styles.btn} ${styles.hintBtn}`}
