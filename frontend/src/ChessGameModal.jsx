@@ -92,7 +92,6 @@ const ChessGameModal = ({ bot, user, onClose }) => {
       setIsGameOver(true);
       setGameStatus(statusText);
       clearHighlights();
-      if (timerRef.current) clearInterval(timerRef.current);
       if (pollingRef.current) clearInterval(pollingRef.current);
 
       saveGameToDb(statusText);
@@ -146,29 +145,7 @@ const ChessGameModal = ({ bot, user, onClose }) => {
     return true;
   };
 
-  useEffect(() => {
-    if (isGameOver) return;
-
-    timerRef.current = setInterval(() => {
-      if (currentTurn === playerColor) {
-        setPlayerTime((prev) => Math.max(0, prev - 1));
-      } else {
-        setBotTime((prev) => Math.max(0, prev - 1));
-      }
-    }, 1000);
-
-    return () => clearInterval(timerRef.current);
-  }, [currentTurn, isGameOver, playerColor]);
-
-  useEffect(() => {
-    if (isGameOver) return;
-    if (playerTime === 0) {
-      handleGameOver("Час вичерпано. Бот переміг!");
-    } else if (botTime === 0) {
-      handleGameOver("Час бота вичерпано. Ви перемогли!");
-    }
-  }, [playerTime, botTime, isGameOver, handleGameOver]);
-
+ 
   const makeBotMove = useCallback(async () => {
     const game = gameRef.current;
     if (isGameOver || (game.turn() === "w" ? "white" : "black") !== botColor) return;
