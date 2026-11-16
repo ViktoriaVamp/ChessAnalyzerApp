@@ -1,0 +1,357 @@
+.overlay {
+  position: fixed;
+   inset: 0;
+  background: rgba(0, 0, 0, 0.78);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  padding: 20px;
+}
+
+.modal {
+  background: #121215;
+  border: 1px solid #4a151b;
+  box-shadow: 0 0 35px rgba(139, 0, 0, 0.35);
+  border-radius: 12px;
+  width: 100%;
+  max-width: 1050px;
+  max-height: 90vh;
+  overflow-y: auto;
+  color: #e6e6e6;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #2b181a;
+  padding-bottom: 14px;
+}
+
+.titleBlock {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.shieldIcon {
+  font-size: 28px;
+}
+
+.title {
+  margin: 0;
+  font-size: 20px;
+  color: #ffffff;
+}
+
+.subtitle {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: #9e9ea6;
+}
+
+.highlightServer {
+  color: #ff5c6c;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.toggleBtn {
+  background: #1e1e24;
+  border: 1px solid #3c3c46;
+  color: #ccc;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.activeLive {
+  border-color: #2ea043;
+  color: #4ac26b;
+  background: rgba(46, 160, 67, 0.12);
+}
+
+.closeBtn {
+  background: transparent;
+  border: 1px solid #4a151b;
+  color: #e6e6e6;
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.closeBtn:hover {
+  background: #6e141d;
+}
+
+.errorBanner {
+  background: rgba(180, 30, 45, 0.25);
+  border: 1px solid #b41e2d;
+  color: #ff9da5;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.metricsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+.metricCard {
+  background: #18181c;
+  border: 1px solid #2e1a1d;
+  border-radius: 10px;
+  padding: 16px;
+}
+
+.metricLabel {
+  font-size: 13px;
+  color: #a0a0ab;
+}
+
+.metricValueRow {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin: 8px 0;
+}
+
+.metricBigValue {
+  font-size: 28px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.metricUnit {
+  font-size: 13px;
+  color: #8b8b95;
+}
+
+.metricHint {
+  margin: 8px 0 0;
+  font-size: 12px;
+  color: #9e9ea6;
+}
+
+.statusBadge {
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.badgeOk {
+  background: rgba(46, 160, 67, 0.2);
+  color: #56d364;
+}
+
+.badgeDanger {
+  background: rgba(218, 54, 51, 0.25);
+  color: #ff7b72;
+}
+
+.progressBarBg {
+  width: 100%;
+  height: 8px;
+  background: #27272d;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progressBarFill {
+  height: 100%;
+  background: linear-gradient(90deg, #8b1e29, #d42c3e);
+  transition: width 0.3s ease;
+}
+
+.fillDanger {
+  background: linear-gradient(90deg, #d42c3e, #ff6b6b);
+}
+
+.section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.sectionTitle {
+  margin: 0;
+  font-size: 15px;
+  color: #d8d8df;
+  border-left: 3px solid #a8202e;
+  padding-left: 10px;
+}
+
+.nodesGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 14px;
+}
+
+.nodeCard {
+  background: #17171b;
+  border: 1px solid #2d2d35;
+  border-radius: 9px;
+  padding: 14px;
+}
+
+.nodeHeader {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid #26262e;
+}
+
+.nodeName {
+  font-weight: 700;
+  color: #fff;
+}
+
+.nodeOnline {
+  font-size: 12px;
+  color: #4ac26b;
+}
+
+.nodeStats {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 13px;
+}
+
+.nodeStats div {
+  display: flex;
+  justify-content: space-between;
+  color: #a9a9b3;
+}
+
+.nodeStats strong {
+  color: #e6e6e6;
+}
+
+.emptyBox {
+  background: #17171b;
+  border: 1px dashed #33333d;
+  padding: 20px;
+  text-align: center;
+  border-radius: 8px;
+  color: #8a8a94;
+  font-size: 14px;
+}
+
+.tableWrapper {
+  overflow-x: auto;
+  border: 1px solid #292930;
+  border-radius: 8px;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  background: #16161a;
+}
+
+.table th,
+.table td {
+  padding: 10px 12px;
+  text-align: left;
+  border-bottom: 1px solid #23232a;
+}
+
+.table th {
+  background: #1d1618;
+  color: #c9c9d1;
+  font-weight: 600;
+}
+
+.serverTag {
+  background: #25252e;
+  border: 1px solid #3c3c4a;
+  padding: 2px 7px;
+  border-radius: 4px;
+  font-size: 12px;
+  color: #c2c2ff;
+}
+
+.taskStatus {
+  padding: 3px 8px;
+  border-radius: 5px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.statusRunning {
+  background: rgba(46, 160, 67, 0.18);
+  color: #56d364;
+}
+
+.statusQueued {
+  background: rgba(210, 153, 34, 0.2);
+  color: #e3b341;
+}
+
+.statusCompleted {
+  background: rgba(56, 139, 253, 0.15);
+  color: #79c0ff;
+}
+
+.statusCancelled {
+  background: rgba(248, 81, 73, 0.15);
+  color: #ff7b72;
+}
+
+.progressCell {
+  min-width: 240px;
+}
+
+.miniProgressWrap {
+  width: 100%;
+  height: 6px;
+  background: #272730;
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 4px;
+}
+
+.miniProgressBar {
+  height: 100%;
+  background: #c92a3a;
+  transition: width 0.25s ease;
+}
+
+.stageText {
+  font-size: 12px;
+  color: #b0b0ba;
+}
+
+.killBtn {
+  background: #7c1923;
+  border: 1px solid #a82431;
+  color: #fff;
+  padding: 5px 10px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.killBtn:hover {
+  background: #a82431;
+}

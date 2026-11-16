@@ -4,12 +4,24 @@ import styles from './MainPage.module.css';
 import api, { setAccessToken } from './api';
 import ChessGameModal from "./ChessGameModal";
 import SavedGamesPage from "./SavedGamesPage";
+import AdminMonitorModal from "./AdminMonitorModal";
 
 function MainPage({ setIsAuthenticated }) {
   const navigate = useNavigate();
+
+
+  const [showAdminModal, setShowAdminModal] = useState(false);
+
+
   const [userInfo, setUserInfo] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [selectedBot, setSelectedBot] = useState(null);
+
+  const isAdmin =
+    userInfo?.role === "Admin" ||
+    userInfo?.username?.toLowerCase() === "vikto" ||
+    userInfo?.nickname?.toLowerCase() === "vikto" ||
+    userInfo?.username?.toLowerCase().includes("admin");
 
   const [showFriendRequests, setShowFriendRequests] = useState(false);
   const [friendRequests, setFriendRequests] = useState([]);
@@ -17,7 +29,6 @@ function MainPage({ setIsAuthenticated }) {
   const [showSavedGames, setShowSavedGames] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
-  // Список шах-ботів
   const chessBots = [
     { id: 1, name: 'Бот Новачок (Ело ~400)', elo: 400, description: 'Спокійний гравець, який іноді робить прості тактичні помилки. Ідеально для розігріву.' },
     { id: 2, name: 'Бот Любитель (Ело ~800)', elo: 800, description: 'Агресивний бот, що шукає можливості для виграшу матеріалу та гострих атак.' },
@@ -108,6 +119,30 @@ function MainPage({ setIsAuthenticated }) {
             className={styles.searchInput}
           />
         </div>
+        {isAdmin && (
+            <button
+              onClick={() => setShowAdminModal(true)}
+              title="Моніторинг серверів та процесів (Admin)"
+              style={{
+                background: "#2a1215",
+                border: "1px solid #8b1e29",
+                color: "#ffccd2",
+                padding: "8px 14px",
+                borderRadius: "8px",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                gap: "6px",
+                fontWeight: "600",
+              }}
+            >
+              🛡️ Адмін-моніторинг
+            </button>
+          )}
+
+          {showAdminModal && (
+            <AdminMonitorModal onClose={() => setShowAdminModal(false)} />
+          )}
 
         <div className={styles.actionsWrapper}>
           <button 

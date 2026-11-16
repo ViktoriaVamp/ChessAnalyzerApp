@@ -44,6 +44,9 @@ namespace App.Migrations
                     b.Property<string>("ResultMovesJson")
                         .HasColumnType("text");
 
+                    b.Property<string>("ServerName")
+                        .HasColumnType("text");
+
                     b.Property<string>("Stage")
                         .IsRequired()
                         .HasColumnType("text");
@@ -204,6 +207,10 @@ namespace App.Migrations
 
                     b.Property<DateTime?>("ResetTokenExpires")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.Property<string>("Username")
                         .IsRequired()

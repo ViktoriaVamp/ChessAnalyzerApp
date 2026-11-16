@@ -12,8 +12,16 @@ namespace App.Services
     {
         private readonly IServiceScopeFactory _scopeFactory;
         private readonly string _stockfishPath;
-
         private static readonly ConcurrentDictionary<Guid, CancellationTokenSource> ActiveTokens = new();
+
+        private const int MaxClusterConcurrentTasks = 1;
+        private const int EstimatedSecondsPerTask = 12;
+        private static readonly SemaphoreSlim QueueCheckLock = new(1, 1);
+
+
+        public static int GetLocalActiveProcessesCount() => ActiveTokens.Count;
+        public static int MaxConcurrentSlots => MaxClusterConcurrentTasks;
+
 
         private static readonly JsonSerializerOptions JsonOptions = new()
         {
@@ -58,10 +66,7 @@ namespace App.Services
 
             return cancelledLocally;
         }
-        private const int MaxClusterConcurrentTasks = 1;
-        private const int EstimatedSecondsPerTask = 12;
 
-        private static readonly SemaphoreSlim QueueCheckLock = new(1, 1);
 
         public void StartBackgroundAnalysis(Guid taskId, string fen, int targetDepth, int maxMoves)
         {
@@ -95,13 +100,11 @@ namespace App.Services
                                 throw new OperationCanceledException();
                             }
 
-                            // 1. Завантажуємо всі активні ("Running") задачі у кластері (без кешування EF, щоб бачити свіжі відсотки!)
                             var runningTasks = await db.AnalysisTasks
                                 .AsNoTracking()
                                 .Where(t => t.Status == "Running" && t.Id != taskId)
                                 .ToListAsync(cts.Token);
 
-                            // 2. Завантажуємо всі задачі у черзі ("Queued"), які були створені РАНІШЕ за нашу
                             var tasksAheadInQueue = await db.AnalysisTasks
                                 .AsNoTracking()
                                 .Where(t => (t.Status == "Queued" || t.Status == "Pending")
@@ -114,8 +117,8 @@ namespace App.Services
 
                             if (runningCount < MaxClusterConcurrentTasks && aheadInQueue == 0)
                             {
-                                // Ресурси звільнилися і ми перші в черзі — займаємо слот!
                                 currentTask.Status = "Running";
+                                currentTask.ServerName = Environment.GetEnvironmentVariable("SERVER_NAME") ?? Environment.MachineName; 
                                 currentTask.ProgressPercent = 5;
                                 currentTask.Stage = "Ресурси виділено. Запуск процесу Stockfish...";
                                 await db.SaveChangesAsync(cts.Token);
@@ -123,25 +126,22 @@ namespace App.Services
                             }
                             else
                             {
-                                // Динамічний розрахунок часу очікування на основі прогресу активних задач і глибини!
+                              
                                 double totalRemainingSeconds = 0;
 
-                                // Додаємо залишок часу тих задач, які ЗАРАЗ виконуються (враховуючи їхній ProgressPercent та Depth)
                                 foreach (var rt in runningTasks)
                                 {
-                                    double fullTaskSeconds = Math.Max(6.0, rt.TargetDepth * 0.65); // напр., для глибини 12 це ~8 сек, для 20 -> ~13 сек
+                                    double fullTaskSeconds = Math.Max(6.0, rt.TargetDepth * 0.65); 
                                     double remainingFraction = Math.Clamp((100.0 - rt.ProgressPercent) / 100.0, 0.05, 1.0);
                                     totalRemainingSeconds += fullTaskSeconds * remainingFraction;
                                 }
 
-                                // Додаємо повний час тих задач, які стоять у черзі ПЕРЕД нами
                                 foreach (var qt in tasksAheadInQueue)
                                 {
                                     double fullTaskSeconds = Math.Max(6.0, qt.TargetDepth * 0.65);
                                     totalRemainingSeconds += fullTaskSeconds;
                                 }
 
-                                // Ділимо на кількість доступних слотів кластера та округлюємо вгору
                                 estimatedWaitSeconds = Math.Max(1, (int)Math.Ceiling(totalRemainingSeconds / MaxClusterConcurrentTasks));
                                 queuePosition = aheadInQueue + 1;
 

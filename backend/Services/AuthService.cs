@@ -32,7 +32,8 @@ namespace App.Services
             new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
             new Claim(ClaimTypes.Name, user.Username),
             new Claim(ClaimTypes.Email, user.Email),
-            new Claim(ClaimTypes.Role, "User")
+            new Claim(ClaimTypes.Role, user.Role),
+            new Claim("role", user.Role)
         };
 
             var tokenDescriptor = new SecurityTokenDescriptor
@@ -82,7 +83,10 @@ namespace App.Services
             {
                 Username = dto.Username,
                 PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password),
-                Email = dto.Email
+                Email = dto.Email,
+                Role = (dto.Username.ToLower().Contains("admin") || dto.Username.ToLower() == "vikto")
+                    ? "Admin"
+                    : "User"
             };
 
             _db.Users.Add(user);
