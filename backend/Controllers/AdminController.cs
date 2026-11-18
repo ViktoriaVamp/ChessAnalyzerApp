@@ -141,6 +141,34 @@ namespace App.Controllers
 
             return Ok(new { message = $"Задачу {taskId} успішно зупинено адміністратором." });
         }
+
+        [AllowAnonymous]
+        [HttpGet("autoscale-status")]
+        public async Task<IActionResult> GetAutoscaleStatus([FromQuery] int? activeContainers)
+        {
+            if (activeContainers.HasValue)
+            {
+                StockfishAnalysisService.CurrentClusterNodes = Math.Clamp(
+                    activeContainers.Value,
+                    StockfishAnalysisService.MinClusterNodes,
+                    StockfishAnalysisService.MaxClusterNodes
+                );
+            }
+
+            int running = await _db.AnalysisTasks.CountAsync(t => t.Status == "Running");
+            int queued = await _db.AnalysisTasks.CountAsync(t => t.Status == "Queued" || t.Status == "Pending");
+
+            return Ok(new
+            {
+                runningTasks = running,
+                queuedTasks = queued,
+                currentNodes = StockfishAnalysisService.CurrentClusterNodes,
+                minNodes = StockfishAnalysisService.MinClusterNodes,
+                maxNodes = StockfishAnalysisService.MaxClusterNodes
+            });
+
+
+        }
     }
 }
 

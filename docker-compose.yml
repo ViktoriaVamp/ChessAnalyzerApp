@@ -1,26 +1,25 @@
 services:
-  backend-1:
+  backend:
     build:
       context: ./backend
       dockerfile: Dockerfile
     environment:
-      - SERVER_NAME=AppServer-1
-      - STOCKFISH_PATH=/usr/games/stockfish
       - ASPNETCORE_ENVIRONMENT=Development
-    restart: unless-stopped
+      - ASPNETCORE_URLS=http://+:8080
+    expose:
+      - "8080"
+    deploy:
+      replicas: 2 
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+    networks:
+      - chess_net
 
-  backend-2:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-    environment:
-      - SERVER_NAME=AppServer-2
-      - STOCKFISH_PATH=/usr/games/stockfish
-      - ASPNETCORE_ENVIRONMENT=Development
-    restart: unless-stopped
-
-  load-balancer:
+  nginx:
     image: nginx:alpine
+    container_name: chess-load-balancer
     ports:
       - "80:80"
       - "443:443"
@@ -29,6 +28,10 @@ services:
       - ./nginx/certs:/etc/nginx/certs:ro
       - ./frontend/dist:/usr/share/nginx/html:ro
     depends_on:
-      - backend-1
-      - backend-2
-    restart: unless-stopped
+      - backend
+    networks:
+      - chess_net
+
+networks:
+  chess_net:
+    driver: bridge
