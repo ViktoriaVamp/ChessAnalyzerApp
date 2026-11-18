@@ -9,11 +9,11 @@ const SavedGamesPage = ({ user, onBack }) => {
   const [analyses, setAnalyses] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Вибрана партія та поточний крок (індекс FEN)
+
   const [selectedGame, setSelectedGame] = useState(null);
   const [currentStep, setCurrentStep] = useState(0);
 
-  // Вибраний запит аналізу та вибраний хід-підказка для підсвічування
+
   const [selectedAnalysis, setSelectedAnalysis] = useState(null);
   const [selectedHintMove, setSelectedHintMove] = useState(null);
 
@@ -54,7 +54,7 @@ const SavedGamesPage = ({ user, onBack }) => {
     fetchData();
   }, [user?.id]);
 
-  // Визначаємо, яку позицію (FEN) та орієнтацію показувати на дошці
+
   let displayedFen = "start";
   let boardOrientation = "white";
 
@@ -65,7 +65,7 @@ const SavedGamesPage = ({ user, onBack }) => {
     displayedFen = selectedAnalysis.fen || "start";
   }
 
-  // Підсвічування клітинок для режиму перегляду запитів аналізу
+
   const customSquareStyles = {};
   if (activeTab === "analyses" && selectedHintMove) {
     let bgColor = "rgba(239, 68, 68, 0.55)";
@@ -128,7 +128,6 @@ const SavedGamesPage = ({ user, onBack }) => {
           <h2 className="header-title">Архів партій та аналізів</h2>
         </div>
 
-        {/* Перемикач вкладок */}
         <div className="tabs-switcher">
           <button
             onClick={() => {
@@ -157,7 +156,7 @@ const SavedGamesPage = ({ user, onBack }) => {
         <div className="loading-message">Завантаження історії...</div>
       ) : (
         <div className="saved-games-grid">
-          {/* ЛІВА КОЛОНКА: Список партій або Список запитів аналізу */}
+         
           <div className="list-column">
             {activeTab === "games" ? (
               games.length === 0 ? (
@@ -225,13 +224,13 @@ const SavedGamesPage = ({ user, onBack }) => {
             )}
           </div>
 
-          {/* ПРАВА КОЛОНКА: Шахова дошка + Плеєр ходів або Підказки аналізу */}
+         
           <div className="board-column">
             <div className="board-wrapper">
               <Chessboard {...boardConfig} options={boardConfig} />
             </div>
 
-            {/* Керування для вкладки "Збережені партії" */}
+         
             {activeTab === "games" && selectedGame && (
               <div className="controls-wrapper">
                 <div className="step-controls">
@@ -270,7 +269,7 @@ const SavedGamesPage = ({ user, onBack }) => {
                   </button>
                 </div>
 
-                {/* Список усіх ходів партії */}
+          
                 <div className="moves-list">
                   {selectedGame.moves.map((san, idx) => {
                     const stepIdx = idx + 1;
@@ -291,7 +290,7 @@ const SavedGamesPage = ({ user, onBack }) => {
               </div>
             )}
 
-            {/* Деталі для вкладки "Історія аналізів" */}
+     
             {activeTab === "analyses" && selectedAnalysis && (
               <div className="controls-wrapper">
                 <div className="analysis-hint-label">

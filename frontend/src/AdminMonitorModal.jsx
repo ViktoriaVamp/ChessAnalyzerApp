@@ -116,7 +116,7 @@ const AdminMonitorModal = ({ onClose }) => {
               style={{ padding: "6px 12px", fontWeight: "600" }}
               onClick={() => handleStressTest(10)}
               disabled={isLaunchingStress}
-              title="Автоматично відправити 5 важких задач для демонстрації черги та балансування"
+              title="Автоматично відправити 10 важких задач для демонстрації черги та балансування"
             >
               {isLaunchingStress ? "Запуск..." : "Tест (10 задач)"}
             </button>
@@ -136,7 +136,7 @@ const AdminMonitorModal = ({ onClose }) => {
 
         {error && <div className={styles.errorBanner}>{error}</div>}
 
-        {/* Блок 1: Загальне навантаження на систему */}
+     
         <div className={styles.metricsGrid}>
           <div className={styles.metricCard}>
             <span className={styles.metricLabel}>Завантаження слотів CPU</span>
@@ -185,7 +185,7 @@ const AdminMonitorModal = ({ onClose }) => {
           </div>
         </div>
 
-        {/* Блок 2: Стан кожного сервера (AppServer-1 та AppServer-2) */}
+     
         <div className={styles.section}>
           <h3 className={styles.sectionTitle}>Вузли серверів застосувань (Docker Containers)</h3>
           <div className={styles.nodesGrid}>
@@ -227,7 +227,7 @@ const AdminMonitorModal = ({ onClose }) => {
           </div>
         </div>
 
-        {/* Блок 3: Активні процеси та черга в реальному часі */}
+    
         <div className={styles.section}>
           <h3 className={styles.sectionTitle}>
             Запущені процеси та черга ({data?.activeTasks?.length || 0})

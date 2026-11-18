@@ -213,7 +213,7 @@ namespace App.Controllers
 
             var savedGame = new SavedGame
             {
-                UserId = validUserId, // <-- Прив'язуємо партію до реального користувача
+                UserId = validUserId, 
                 PlayerName = string.IsNullOrWhiteSpace(dto.PlayerName) ? "Гравець" : dto.PlayerName,
                 BotName = string.IsNullOrWhiteSpace(dto.BotName) ? "Бот" : dto.BotName,
                 BotElo = dto.BotElo,
