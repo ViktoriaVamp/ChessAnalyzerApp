@@ -40,7 +40,7 @@ const Login = ({ setIsAuthenticated }) => {
           setIsAuthenticated(true);
         }
         
-        // Змініть на '/main-page' або той шлях, який ви використовуєте в App.jsx для головної сторінки
+       
         navigate('/main-page');
       }
 

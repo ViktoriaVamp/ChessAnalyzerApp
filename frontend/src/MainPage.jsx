@@ -203,7 +203,7 @@ function MainPage({ setIsAuthenticated }) {
         </div>
       </header>
 
-      {/* --- Основний контент --- */}
+  
       <div className={styles.contentGrid}>
         <div className={styles.profileCard}>
           <div className={styles.avatarCircle}>
@@ -231,7 +231,7 @@ function MainPage({ setIsAuthenticated }) {
           </div>
         </div>
 
-        {/* --- Блок ботів або Збережених партій --- */}
+   
         <div className={styles.botsSectionContainer}>
           {showSavedGames ? (
             <SavedGamesPage

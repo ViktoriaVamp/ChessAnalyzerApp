@@ -106,14 +106,14 @@ function UserProfilePage() {
           </button>
         </div>
 
-        {/* Колонка контенту (справа) — ТУТ ЗАМІСТЬ БОТІВ ІНФОРМАЦІЯ ПРО КОРИСТУВАЧА */}
+        
         <div className={styles.botsSectionContainer}>
           <div className={styles.botsCard}>
             <h2 className={styles.botsTitle}>Профіль гравця: {profile.username}</h2>
             <p style={{ color: '#aaa', lineHeight: '1.6' }}>
               Тут ви можете переглянути статистику гравця, його останні партії або надіслати йому виклик на шаховий бій.
             </p>
-            {/* Тут можна додати список ігор цього користувача чи його досягнення */}
+         
           </div>
         </div>
 

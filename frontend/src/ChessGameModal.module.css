@@ -12,25 +12,25 @@
 .modal {
   width: 100%;
   max-width: 520px;
-  max-height: 92vh; /* Обмежуємо висоту вікна до 92% висоти екрана */
+  max-height: 92vh;
   display: flex;
   flex-direction: column;
-  overflow: hidden; /* Ховаємо вихід за межі рамки */
+  overflow: hidden;
   border-radius: 12px;
 }
 
 .header {
-  flex-shrink: 0; /* Шапка з назвою бота та кнопкою ✕ завжди зафіксована зверху */
+  flex-shrink: 0; 
 }
 
 .content {
   flex: 1;
-  min-height: 0; /* Обов'язково для роботи скролу всередині flex-контейнера */
-  overflow-y: auto; /* Вмикаємо вертикальну прокрутку всередині вікна */
+  min-height: 0; 
+  overflow-y: auto; 
   padding-right: 6px;
 }
 
-/* Додатково: трохи компактніша дошка, щоб усе вміщалося на ноутбуках */
+
 .boardWrapper {
   width: 100%;
   max-width: 380px;
@@ -78,7 +78,7 @@
   transition: border-color 0.25s ease, box-shadow 0.25s ease;
 }
 
-/* Активний хід підсвічується бордовою рамкою */
+
 .activeTurnCard {
   border-color: var(--red-ll, #7b0202);
   box-shadow: inset 0 0 10px var(--red-dd, #2a0000);
