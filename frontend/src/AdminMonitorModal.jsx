@@ -49,6 +49,40 @@ const AdminMonitorModal = ({ onClose }) => {
     }
   };
 
+  const [isLaunchingStress, setIsLaunchingStress] = useState(false);
+
+  const testFens = [
+    "r1bqkbnr/pppp1ppp/2n5/4p3/4P3/5N2/PPPP1PPP/RNBQKB1R w KQkq - 2 3",
+    "rnbqkb1r/pp2pppp/2p2n2/3p4/2PP4/2N5/PP2PPPP/R1BQKBNR w KQkq - 0 4",
+    "r1bq1rk1/ppp2ppp/2np1n2/2b1p3/2B1P3/2NP1N2/PPP2PPP/R1BQ1RK1 w - - 0 7",
+    "rnbqk2r/pppp1ppp/4pn2/8/1bPP4/2N5/PP2PPPP/R1BQKBNR w KQkq - 2 4",
+    "r2qkb1r/ppp2ppp/2np1n2/4p1B1/2B1P1b1/2NP1N2/PPP2PPP/R2QK2R w KQkq - 4 6",
+    "r1bqk2r/pp2ppbp/2np1np1/8/3NP3/2N1BP2/PPPQ2PP/R3KB1R w KQkq - 3 8",
+    "r1bq1rk1/ppp1ppbp/2np1np1/8/2PPP3/2N2N2/PP2BPPP/R1BQ1RK1 w - - 3 7",
+    "r1bq1rk1/2p1bppp/p1n2n2/1p1pp3/4P3/1BP2N2/PP1P1PPP/RNBQR1K1 w - - 0 9",
+    "r1bqk2r/pppp1ppp/2n2n2/2b1p3/2B1P3/3P1N2/PPP2PPP/RNBQK2R w KQkq - 1 5",
+    "r2q1rk1/1b2bppp/p1n1pn2/1p6/3NP3/1BN1B3/PPP2PPP/R2Q1RK1 w - - 4 11",
+  ];
+
+  const handleStressTest = async (count = 10) => {
+    setIsLaunchingStress(true);
+    try {
+      for (let i = 0; i < count; i++) {
+        const fen = testFens[i % testFens.length];
+        await api.post("/api/game/analyze-start", {
+          userId: 1,
+          fen: fen,
+          depth: 18,
+          maxMoves: 12,
+        }).catch((err) => console.warn("Запит відхилено:", err.response?.data));
+
+        fetchMonitoringData();
+        await new Promise((r) => setTimeout(r, 400));
+      }
+    } finally {
+      setIsLaunchingStress(false);
+    }
+  };
   const cluster = data?.clusterMetrics || {
     runningTasksCount: 0,
     queuedTasksCount: 0,
@@ -62,7 +96,6 @@ const AdminMonitorModal = ({ onClose }) => {
   return (
     <div className={styles.overlay} onClick={onClose}>
       <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
-        {/* Шапка модального вікна */}
         <div className={styles.header}>
           <div className={styles.titleBlock}>
             <span className={styles.shieldIcon}>🛡️</span>
@@ -78,10 +111,21 @@ const AdminMonitorModal = ({ onClose }) => {
           </div>
 
           <div className={styles.headerActions}>
+          <button
+              className={styles.killBtn}
+              style={{ padding: "6px 12px", fontWeight: "600" }}
+              onClick={() => handleStressTest(10)}
+              disabled={isLaunchingStress}
+              title="Автоматично відправити 5 важких задач для демонстрації черги та балансування"
+            >
+              {isLaunchingStress ? "Запуск..." : "Tест (10 задач)"}
+            </button>
+
             <button
               className={`${styles.toggleBtn} ${autoRefresh ? styles.activeLive : ""}`}
               onClick={() => setAutoRefresh(!autoRefresh)}
             >
+             
               {autoRefresh ? "● LIVE (1.2s)" : "⏸ Пауза"}
             </button>
             <button className={styles.closeBtn} onClick={onClose}>

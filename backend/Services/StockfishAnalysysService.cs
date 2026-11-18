@@ -14,13 +14,18 @@ namespace App.Services
         private readonly string _stockfishPath;
         private static readonly ConcurrentDictionary<Guid, CancellationTokenSource> ActiveTokens = new();
 
-        private const int MaxClusterConcurrentTasks = 1;
         private const int EstimatedSecondsPerTask = 12;
         private static readonly SemaphoreSlim QueueCheckLock = new(1, 1);
 
+        public const int MinClusterNodes = 2;
+        public const int MaxClusterNodes = 4; 
 
+        public static int CurrentClusterNodes { get; set; } = 2;
+        public static int MaxConcurrentSlots => CurrentClusterNodes;
         public static int GetLocalActiveProcessesCount() => ActiveTokens.Count;
-        public static int MaxConcurrentSlots => MaxClusterConcurrentTasks;
+
+        private static int MaxClusterConcurrentTasks => CurrentClusterNodes;
+
 
 
         private static readonly JsonSerializerOptions JsonOptions = new()
@@ -33,10 +38,22 @@ namespace App.Services
         {
             _scopeFactory = scopeFactory;
 
-          
-            _stockfishPath = Environment.GetEnvironmentVariable("STOCKFISH_PATH")
-                 ?? Path.Combine(AppContext.BaseDirectory, "StockFish", "stockfish-windows-x86-64-universal.exe");  
-           
+            var envPath = Environment.GetEnvironmentVariable("STOCKFISH_PATH");
+            if (!string.IsNullOrWhiteSpace(envPath))
+            {
+                _stockfishPath = envPath;
+            }
+            else if (OperatingSystem.IsWindows())
+            {
+                _stockfishPath = Path.Combine(AppContext.BaseDirectory, "StockFish", "stockfish-windows-x86-64-universal.exe");
+            }
+            else
+            {
+                _stockfishPath = File.Exists("/usr/games/stockfish")
+                    ? "/usr/games/stockfish"
+                    : "/usr/bin/stockfish";
+            }
+
         }
 
         public async Task<bool> CancelTaskAsync(Guid taskId)
@@ -70,7 +87,7 @@ namespace App.Services
 
         public void StartBackgroundAnalysis(Guid taskId, string fen, int targetDepth, int maxMoves)
         {
-            var cts = new CancellationTokenSource(TimeSpan.FromSeconds(120));
+            var cts = new CancellationTokenSource(TimeSpan.FromMinutes(10));
             ActiveTokens[taskId] = cts;
 
             _ = Task.Run(async () =>
@@ -160,8 +177,8 @@ namespace App.Services
                        
                         await Task.Delay(1000, cts.Token);
                     }
+                    cts.CancelAfter(TimeSpan.FromSeconds(80));
 
-                
                     if (!File.Exists(_stockfishPath))
                     {
                         throw new FileNotFoundException($"Не знайдено файл рушія за шляхом: {_stockfishPath}");

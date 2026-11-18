@@ -99,26 +99,35 @@ namespace App.Controllers
 
             int validUserId = await ResolveUserIdAsync();
 
-            bool hasRunningTask = await _db.AnalysisTasks.AnyAsync(t => t.UserId == validUserId && t.Status == "Running");
-           /* if (hasRunningTask)
+            
+            try
             {
-                return BadRequest(new { message = "У вас вже виконується задача аналізу. Зачекайте або скасуйте її." });
-            }*/
+                int totalTasks = await _db.AnalysisTasks.CountAsync(t => t.UserId == validUserId);
+                if (totalTasks >= 60)
+                {
+                    var oldCompletedIds = await _db.AnalysisTasks
+                        .Where(t => t.UserId == validUserId && t.Status != "Running" && t.Status != "Queued")
+                        .OrderBy(t => t.CreatedAt)
+                        .Take(20)
+                        .Select(t => t.Id)
+                        .ToListAsync();
 
-            int totalTasks = await _db.AnalysisTasks.CountAsync(t => t.UserId == validUserId);
-            if (totalTasks >= 40)
+                    if (oldCompletedIds.Any())
+                    {
+                        await _db.AnalysisTasks
+                            .Where(t => oldCompletedIds.Contains(t.Id))
+                            .ExecuteDeleteAsync();
+                    }
+                }
+            }
+            catch
             {
-                var oldestTasks = await _db.AnalysisTasks
-                    .Where(t => t.UserId == validUserId)
-                    .OrderBy(t => t.CreatedAt)
-                    .Take(totalTasks - 39)
-                    .ToListAsync();
-                _db.AnalysisTasks.RemoveRange(oldestTasks);
+                
             }
 
             var task = new AnalysisTask
             {
-                UserId = validUserId, 
+                UserId = validUserId,
                 Fen = dto.Fen,
                 TargetDepth = dto.Depth,
                 MaxMoves = dto.MaxMoves,

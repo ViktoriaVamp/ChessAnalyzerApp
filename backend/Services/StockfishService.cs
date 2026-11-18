@@ -11,8 +11,21 @@ namespace App.Services
 
         public StockfishService()
         {
-            _stockfishPath = Environment.GetEnvironmentVariable("STOCKFISH_PATH")
-                  ?? Path.Combine(AppContext.BaseDirectory, "StockFish", "stockfish-windows-x86-64-universal.exe");
+            var envPath = Environment.GetEnvironmentVariable("STOCKFISH_PATH");
+            if (!string.IsNullOrWhiteSpace(envPath))
+            {
+                _stockfishPath = envPath;
+            }
+            else if (OperatingSystem.IsWindows())
+            {
+                _stockfishPath = Path.Combine(AppContext.BaseDirectory, "StockFish", "stockfish-windows-x86-64-universal.exe");
+            }
+            else
+            {
+                _stockfishPath = File.Exists("/usr/games/stockfish")
+                    ? "/usr/games/stockfish"
+                    : "/usr/bin/stockfish";
+            }
         }
 
         public async Task<string> GetBestMoveAsync(string fen, int elo, CancellationToken cancellationToken)
