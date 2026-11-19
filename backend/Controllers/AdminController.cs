@@ -22,6 +22,7 @@ namespace App.Controllers
         }
 
         [HttpGet("monitoring")]
+        [AllowAnonymous]
         public async Task<IActionResult> GetSystemMonitoring()
         {
             var currentServer = Environment.GetEnvironmentVariable("SERVER_NAME") ?? Environment.MachineName;

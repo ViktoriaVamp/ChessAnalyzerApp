@@ -402,17 +402,17 @@ const ChessGameModal = ({ bot, user, onClose }) => {
       switch (selectedHintMove.quality) {
         case "Найкращий хід":
         case "Хороший хід":
-          bgColor = "rgba(34, 197, 94, 0.55)"; // Зелений
+          bgColor = "rgba(34, 197, 94, 0.55)"; 
           borderColor = "#4ade80";
           break;
 
         case "Неточність":
-          bgColor = "rgba(250, 204, 21, 0.55)"; // Жовтий
+          bgColor = "rgba(250, 204, 21, 0.55)";
           borderColor = "#facc15";
           break;
 
-        default: // "Помилка" та "Груба помилка (Зівок)"
-          bgColor = "rgba(239, 68, 68, 0.55)"; // Червоний
+        default: 
+          bgColor = "rgba(239, 68, 68, 0.55)"; 
           borderColor = "#f87171";
           break;
       }
