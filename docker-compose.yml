@@ -9,7 +9,7 @@ services:
     expose:
       - "8080"
     deploy:
-      replicas: 2 
+      replicas: 2
       resources:
         limits:
           cpus: '1.0'
@@ -27,6 +27,58 @@ services:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - ./nginx/certs:/etc/nginx/certs:ro
       - ./frontend/dist:/usr/share/nginx/html:ro
+    depends_on:
+      - backend
+    networks:
+      - chess_net
+
+  autoscaler:
+    image: docker:cli
+    container_name: chess-autoscaler
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./:/workspace
+    working_dir: /workspace
+    environment:
+      - MIN_NODES=2
+      - MAX_NODES=4
+    command: >
+      /bin/sh -c "apk add --no-cache curl jq >/dev/null 2>&1;
+      echo '[Autoscaler] Ready (2..4 nodes)';
+      IDLE=0;
+      while true; do
+        CUR=$$(docker ps --filter 'name=backend' --format '{{.ID}}' | wc -l | tr -d ' ');
+        [ -z \"$$CUR\" ] || [ \"$$CUR\" -lt 2 ] && CUR=2;
+        RES=$$(curl -s --max-time 3 \"http://backend:8080/api/admin/autoscale-status?activeContainers=$$CUR\");
+        Q=$$(echo \"$$RES\" | jq -r '.queuedTasks // 0');
+        R=$$(echo \"$$RES\" | jq -r '.runningTasks // 0');
+        [ -z \"$$Q\" ] && Q=0; [ -z \"$$R\" ] && R=0;
+        echo \"[Status] Nodes: $$CUR | Running: $$R | Queued: $$Q\";
+        if [ \"$$Q\" -gt 0 ] || [ \"$$R\" -ge \"$$CUR\" ]; then
+          IDLE=0;
+          if [ \"$$CUR\" -lt 4 ]; then
+            CUR=$$((CUR + 1));
+            echo \">>> [SCALE UP] Scaling backend to $$CUR nodes...\";
+           docker compose -p chessanalyzerapp -f /workspace/docker-compose.yml up -d --scale backend=$$CUR --no-recreate --no-deps backend;
+           sleep 2;
+           docker exec chess-load-balancer nginx -s reload;
+          fi;
+        elif [ \"$$R\" -eq 0 ] && [ \"$$Q\" -eq 0 ]; then
+          IDLE=$$((IDLE + 1));
+          if [ \"$$IDLE\" -ge 3 ] && [ \"$$CUR\" -gt 2 ]; then
+            CUR=$$((CUR - 1));
+            IDLE=0;
+            echo \"<<< [SCALE DOWN] Scaling backend to $$CUR nodes...\";
+            docker compose -p chessanalyzerapp -f /workspace/docker-compose.yml up -d --scale backend=$$CUR --no-recreate --no-deps backend;
+            docker exec chess-load-balancer nginx -s reload;
+          fi;
+        else
+          IDLE=0;
+        fi;
+        for i in 1 2 3 4 5 6; do curl -s --max-time 2 \"http://backend:8080/api/admin/autoscale-status?activeContainers=$$CUR\" >/dev/null; done;
+        sleep 4;
+      done"
     depends_on:
       - backend
     networks:
